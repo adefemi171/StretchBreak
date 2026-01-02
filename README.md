@@ -113,4 +113,5 @@ The built files will be in the `dist` directory.
 
 ## License
 
-MIT
+CC-BY-NC-4.0
+
