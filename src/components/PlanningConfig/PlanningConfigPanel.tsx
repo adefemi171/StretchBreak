@@ -1,14 +1,13 @@
-import { useState } from 'react';
 import { StrategySelector } from './StrategySelector';
 import { PTOInput } from './PTOInput';
 import { TimeframeSelector, type TimeframeType } from './TimeframeSelector';
 import { CompanyHolidays } from './CompanyHolidays';
-import type { VacationStrategy, CompanyHoliday, PlanningConfig, PublicHoliday } from '../../utils/types';
+import type { VacationStrategy, CompanyHoliday, PlanningConfig } from '../../utils/types';
 import './PlanningConfigPanel.css';
 
 interface PlanningConfigPanelProps {
   config: PlanningConfig;
-  holidays: PublicHoliday[];
+  holidays: unknown[];
   countryCode: string;
   onConfigChange: (config: PlanningConfig) => void;
   onOptimize: () => void;
@@ -16,8 +15,6 @@ interface PlanningConfigPanelProps {
 
 export const PlanningConfigPanel = ({
   config,
-  holidays,
-  countryCode,
   onConfigChange,
   onOptimize,
 }: PlanningConfigPanelProps) => {

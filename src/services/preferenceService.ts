@@ -22,8 +22,7 @@ export const getUserPreferences = (): UserPreferences => {
   };
 };
 
-export const updatePreferencesFromPlan = (plan: HolidayPlan): void => {
-  const preferences = getUserPreferences();
+export const updatePreferencesFromPlan = (_plan: HolidayPlan): void => {
   const plans = getAllPlans();
   
   // Extract preferred months from all plans

@@ -16,7 +16,6 @@ interface OptimizationParams {
 export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[] => {
   const { holidays, companyHolidays, availablePTODays, strategy, startDate, endDate } = params;
   
-  // Combine public and company holidays
   const allHolidays = [
     ...holidays.map(h => ({ date: h.date, name: h.localName, isPublic: true })),
     ...companyHolidays.map(h => ({ date: h.date, name: h.name, isPublic: false })),
@@ -25,12 +24,7 @@ export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[]
     return isWithinInterval(holidayDate, { start: startDate, end: endDate });
   });
   
-  const suggestions: PlanSuggestion[] = [];
-  
-  // Get all potential vacation periods based on strategy
   const periods = findVacationPeriods(allHolidays, strategy, startDate, endDate);
-  
-  // Optimize to use available PTO days
   const optimized = optimizePTODistribution(periods, availablePTODays, strategy);
   
   return optimized;
@@ -99,8 +93,8 @@ function findVacationPeriods(
 
 function createLongWeekendSuggestion(
   holiday: any,
-  allHolidays: any[],
-  index: number
+  _allHolidays: any[],
+  _index: number
 ): PlanSuggestion | null {
   const holidayDate = holiday.dateObj;
   const dayOfWeek = getDay(holidayDate);
@@ -142,8 +136,8 @@ function createLongWeekendSuggestion(
 
 function createMiniBreakSuggestion(
   holiday: any,
-  allHolidays: any[],
-  index: number
+  _allHolidays: any[],
+  _index: number
 ): PlanSuggestion | null {
   const holidayDate = holiday.dateObj;
   const dayOfWeek = getDay(holidayDate);
@@ -173,8 +167,8 @@ function createMiniBreakSuggestion(
 
 function createWeekLongSuggestion(
   holiday: any,
-  allHolidays: any[],
-  index: number
+  _allHolidays: any[],
+  _index: number
 ): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = [];
   const holidayDate = holiday.dateObj;
@@ -204,8 +198,8 @@ function createWeekLongSuggestion(
 
 function createExtendedSuggestion(
   holiday: any,
-  allHolidays: any[],
-  index: number
+  _allHolidays: any[],
+  _index: number
 ): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = [];
   const holidayDate = holiday.dateObj;
@@ -267,7 +261,7 @@ function getWeekdaysBetween(start: Date, end: Date): string[] {
 function optimizePTODistribution(
   periods: PlanSuggestion[],
   availablePTODays: number,
-  strategy: VacationStrategy
+  _strategy: VacationStrategy
 ): PlanSuggestion[] {
   // Sort by strategy preferences
   const sorted = [...periods].sort((a, b) => {

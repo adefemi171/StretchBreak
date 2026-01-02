@@ -18,8 +18,10 @@ export const ChatAssistant = ({
 }: ChatAssistantProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
+      id: '1',
       role: 'assistant',
       content: 'Hello! I can help you plan your holidays. Ask me anything about vacation planning, optimal dates, or efficiency strategies.',
+      timestamp: new Date().toISOString(),
     },
   ]);
   const [input, setInput] = useState('');
@@ -39,8 +41,10 @@ export const ChatAssistant = ({
     if (!input.trim() || loading) return;
 
     const userMessage: ChatMessage = {
+      id: Date.now().toString(),
       role: 'user',
       content: input,
+      timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -57,15 +61,19 @@ export const ChatAssistant = ({
       });
 
       const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response,
+        timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       const errorMessage: ChatMessage = {
+        id: (Date.now() + 2).toString(),
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {

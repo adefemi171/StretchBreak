@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { detectUserCountry } from '../services/locationService';
 
 export const useLocation = () => {

@@ -98,7 +98,7 @@ export const Calendar = ({
         </div>
       </div>
       <div className="calendar-months">
-        {months.map((month, index) => (
+        {months.map((month) => (
           <CalendarMonth
             key={`${month.getFullYear()}-${month.getMonth()}`}
             date={month}

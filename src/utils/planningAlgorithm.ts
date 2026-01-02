@@ -3,7 +3,7 @@ import { parseISO, addDays, subDays, isWeekend, format, getDay } from 'date-fns'
 
 export const findOptimalVacationPeriods = (
   holidays: PublicHoliday[],
-  year: number
+  _year: number
 ): PlanSuggestion[] => {
   const suggestions: PlanSuggestion[] = [];
   

@@ -61,7 +61,7 @@ export const CalendarMonth = ({
         <div className="calendar-days">
           {calendarDays.map((day, index) => {
             if (!day) {
-              return <CalendarDay key={`empty-${index}`} date={null} isCurrentMonth={false} isSelected={false} isSuggested={false} isPublicHoliday={false} isWeekend={false} onClick={() => {}} />;
+              return <CalendarDay key={`empty-${index}`} date={null} isCurrentMonth={false} isSelected={false} isSuggested={false} isPublicHoliday={false} isCompanyHoliday={false} isWeekend={false} onClick={() => {}} />;
             }
             
             const isCurrentMonth = day.getMonth() === currentMonth;

@@ -1,4 +1,3 @@
-import { formatDate, isSameDate } from '../../utils/dateUtils';
 import type { PublicHoliday, CompanyHoliday } from '../../utils/types';
 import './CalendarDay.css';
 
