@@ -14,15 +14,15 @@ import { usePlans } from './hooks/usePlans';
 import { useAI } from './hooks/useAI';
 import { usePreferences } from './hooks/usePreferences';
 import { useLocation } from './hooks/useLocation';
-import { createPlanId, getAllPlans, clearAllPlans } from './services/planStorage';
+import { createPlanId, getAllPlans, clearAllPlans, getUsedStrategies } from './services/planStorage';
 import { getSharedPlanFromUrl } from './services/shareService';
-import { setTotalPTODays, getTotalPTODays, getRemainingPTODays, hasSavedPlansWithPTO, resetAllPTOData } from './services/ptoTracking';
+import { setTotalPTODays, getTotalPTODays, getRemainingPTODays, hasSavedPlansWithPTO, resetAllPTOData, getAvailablePTODaysInput } from './services/ptoTracking';
 import { SettingsTab } from './components/Settings/SettingsTab';
 import { optimizeByStrategy } from './utils/strategyOptimizer';
 import { filterHolidaysByRegions } from './utils/holidayFilter';
 import { parseDateString, formatDate } from './utils/dateUtils';
 import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay, eachDayOfInterval } from 'date-fns';
-import type { HolidayPlan, PlanningConfig } from './utils/types';
+import type { HolidayPlan, PlanningConfig, VacationStrategy } from './utils/types';
 import './App.css';
 
 function App() {
@@ -54,8 +54,9 @@ function App() {
   
   const [planningConfig, setPlanningConfig] = useState<PlanningConfig>(() => {
     const initialPTO = initializePTO();
+    const persistedInput = getAvailablePTODaysInput();
     return {
-      availablePTODays: initialPTO,
+      availablePTODays: persistedInput > 0 ? persistedInput : initialPTO,
       timeframe: {
         type: 'calendar-year',
         year: new Date().getFullYear(),
@@ -158,7 +159,6 @@ function App() {
           year: selectedPlan.year,
         },
       }));
-      setActiveTab('planner');
       setShowConfig(false);
     }
   }, [selectedPlan]);
@@ -201,6 +201,146 @@ function App() {
     }));
     
     alert('Plan saved successfully!');
+  };
+
+  const applyStrategyAndSave = (strategyToApply: VacationStrategy) => {
+    // Use remaining PTO if available, otherwise use configured PTO
+    const availablePTO = getTotalPTODays() > 0 ? getRemainingPTODays() : planningConfig.availablePTODays;
+    
+    // Get already used dates from saved plans to avoid overlap
+    const existingPlans = getAllPlans();
+    const usedDates = new Set<string>();
+    existingPlans.forEach(plan => {
+      plan.vacationDays.forEach(day => {
+        if (day && typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+          usedDates.add(day.trim());
+        }
+      });
+    });
+    
+    if (availablePTO === 0) {
+      alert('No remaining PTO days available. Please add more PTO days or remove existing plans.');
+      return;
+    }
+    
+    if (holidays.length === 0) {
+      alert('Please wait for holidays to load, or select a country and year');
+      return;
+    }
+    
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (planningConfig.timeframe.type === 'calendar-year') {
+      const configYear = planningConfig.timeframe.year || new Date().getFullYear();
+      startDate = startOfYear(new Date(configYear, 0, 1));
+      endDate = endOfYear(new Date(configYear, 0, 1));
+    } else {
+      startDate = planningConfig.timeframe.startDate
+        ? parseDateString(planningConfig.timeframe.startDate)
+        : new Date();
+      endDate = planningConfig.timeframe.endDate
+        ? parseDateString(planningConfig.timeframe.endDate)
+        : new Date();
+    }
+    
+    // Filter out past holidays before generating suggestions
+    const today = startOfDay(new Date());
+    const futureHolidays = holidays.filter(holiday => {
+      const holidayDate = startOfDay(parseISO(holiday.date));
+      return !isPast(holidayDate) || isSameDay(holidayDate, today);
+    });
+    
+    // Save total PTO if not already saved
+    if (planningConfig.availablePTODays > 0 && getTotalPTODays() === 0) {
+      setTotalPTODays(planningConfig.availablePTODays);
+    }
+    
+    const suggestions = optimizeByStrategy({
+      holidays: futureHolidays,
+      companyHolidays: planningConfig.companyHolidays,
+      availablePTODays: availablePTO,
+      strategy: strategyToApply,
+      startDate,
+      endDate,
+    });
+    
+    setOptimizedSuggestions(suggestions);
+    setShowConfig(false);
+    
+    // Auto-apply and save the top suggestion
+    if (suggestions.length > 0) {
+      const topSuggestion = suggestions[0];
+      const start = parseDateString(topSuggestion.startDate);
+      const end = parseDateString(topSuggestion.endDate);
+      const dates: string[] = [];
+      
+      const allDays = eachDayOfInterval({ start, end });
+      
+      for (const day of allDays) {
+        const dateStr = formatDate(day);
+        const isPublicHoliday = futureHolidays.some(h => h.date === dateStr);
+        const isCompanyHoliday = planningConfig.companyHolidays.some(h => h.date === dateStr);
+        const dayOfWeek = day.getDay();
+        const isAlreadyUsed = usedDates.has(dateStr);
+        
+        // Only include weekdays that aren't holidays, weekends, or already used in other plans
+        if (!isPublicHoliday && !isCompanyHoliday && dayOfWeek !== 0 && dayOfWeek !== 6 && !isAlreadyUsed) {
+          dates.push(dateStr);
+        }
+      }
+      
+      const sortedDates = [...new Set(dates)].sort();
+      
+      if (sortedDates.length > 0) {
+        setSelectedDates(sortedDates);
+        
+        // Auto-save the plan
+        const strategyLabels: Record<string, string> = {
+          'balanced': 'Flexible Approach',
+          'long-weekends': 'Weekend Focus',
+          'mini-breaks': 'Short Getaways',
+          'week-long': 'Full Week Vacations',
+          'extended': 'Deep Breaks',
+        };
+        const planName = strategyLabels[strategyToApply] || strategyToApply;
+        
+        // Save total PTO if not already saved
+        const totalPTO = getTotalPTODays();
+        if (planningConfig.availablePTODays > 0 && totalPTO === 0) {
+          setTotalPTODays(planningConfig.availablePTODays);
+        }
+        
+        const plan: HolidayPlan = {
+          id: createPlanId(),
+          name: planName,
+          description: `Auto-saved from ${planName} strategy`,
+          countryCode,
+          year,
+          vacationDays: sortedDates,
+          publicHolidays: holidays,
+          companyHolidays: planningConfig.companyHolidays,
+          strategy: strategyToApply as any,
+          availablePTODays: totalPTO > 0 ? totalPTO : planningConfig.availablePTODays,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        
+        addPlan(plan);
+        
+        // Update remaining PTO
+        const remaining = getRemainingPTODays();
+        setPlanningConfig(prev => ({
+          ...prev,
+          availablePTODays: remaining,
+          strategy: strategyToApply as any,
+        }));
+      }
+    }
+    
+    setTimeout(() => {
+      plannerViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleOptimize = () => {
@@ -451,48 +591,6 @@ function App() {
                   </div>
                 )}
               </>
-            ) : selectedPlan ? (
-              // View mode for saved plan - show only breakdown and calendar
-              <>
-                <div className="config-header">
-                  <button
-                    onClick={() => {
-                      setSelectedPlan(null);
-                      setActiveTab('plans');
-                    }}
-                    className="back-button"
-                  >
-                    ← Back to Saved Plans
-                  </button>
-                </div>
-                
-                <PlanBreakdown
-                  plan={selectedPlan}
-                  holidays={holidays}
-                />
-                
-                <StatsPanel
-                  vacationDays={selectedDates}
-                  holidays={holidays}
-                  availablePTODays={selectedPlan.availablePTODays}
-                />
-                
-                <div className="holiday-planner">
-                  <Calendar
-                    selectedDates={selectedDates}
-                    suggestedDates={[]}
-                    holidays={holidays.filter(holiday => {
-                      const today = startOfDay(new Date());
-                      const holidayDate = startOfDay(parseISO(holiday.date));
-                      return !isPast(holidayDate) || isSameDay(holidayDate, today);
-                    })}
-                    companyHolidays={planningConfig.companyHolidays}
-                    onDateClick={() => {}}
-                    year={year}
-                    focusOnDates={selectedPlan.vacationDays}
-                  />
-                </div>
-              </>
             ) : (
               // Normal planning mode - show suggestions and input
               <>
@@ -530,6 +628,13 @@ function App() {
                   onDateChange={setSelectedDates}
                   strategy={planningConfig.strategy}
                   availablePTODays={planningConfig.availablePTODays}
+                  usedStrategies={getUsedStrategies()}
+                  onStrategyChange={(strategy) => {
+                    setPlanningConfig(prev => ({ ...prev, strategy }));
+                  }}
+                  onApplyStrategy={(strategy: VacationStrategy) => {
+                    applyStrategyAndSave(strategy);
+                  }}
                   onAutoSave={(planData) => {
                     // Save total PTO if not already saved
                     const totalPTO = getTotalPTODays();
@@ -612,21 +717,62 @@ function App() {
         )}
         
         {activeTab === 'plans' && (
-          <PlanList
-            onSelectPlan={(plan) => setSelectedPlan(plan)}
-            currentVacationDays={selectedDates}
-            currentHolidays={holidays}
-            currentCountryCode={countryCode}
-            currentYear={year}
-            onPlanDeleted={() => {
-              // Recalculate remaining PTO when a plan is deleted
-              const remaining = getRemainingPTODays();
-              setPlanningConfig(prev => ({
-                ...prev,
-                availablePTODays: remaining,
-              }));
-            }}
-          />
+          selectedPlan ? (
+            // View mode for saved plan - show only breakdown and calendar
+            <>
+              <div className="config-header">
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="back-button"
+                >
+                  ← Back to Saved Plans
+                </button>
+              </div>
+              
+              <PlanBreakdown
+                plan={selectedPlan}
+                holidays={holidays}
+              />
+              
+              <StatsPanel
+                vacationDays={selectedDates}
+                holidays={holidays}
+                availablePTODays={selectedPlan.availablePTODays}
+              />
+              
+              <div className="holiday-planner">
+                <Calendar
+                  selectedDates={selectedDates}
+                  suggestedDates={[]}
+                  holidays={holidays.filter(holiday => {
+                    const today = startOfDay(new Date());
+                    const holidayDate = startOfDay(parseISO(holiday.date));
+                    return !isPast(holidayDate) || isSameDay(holidayDate, today);
+                  })}
+                  companyHolidays={planningConfig.companyHolidays}
+                  onDateClick={() => {}}
+                  year={year}
+                  focusOnDates={selectedPlan.vacationDays}
+                />
+              </div>
+            </>
+          ) : (
+            <PlanList
+              onSelectPlan={(plan) => setSelectedPlan(plan)}
+              currentVacationDays={selectedDates}
+              currentHolidays={holidays}
+              currentCountryCode={countryCode}
+              currentYear={year}
+              onPlanDeleted={() => {
+                // Recalculate remaining PTO when a plan is deleted
+                const remaining = getRemainingPTODays();
+                setPlanningConfig(prev => ({
+                  ...prev,
+                  availablePTODays: remaining,
+                }));
+              }}
+            />
+          )
         )}
         
         {activeTab === 'chat' && isAIAvailable && (

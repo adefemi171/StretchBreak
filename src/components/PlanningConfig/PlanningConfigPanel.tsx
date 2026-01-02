@@ -1,9 +1,8 @@
-import { StrategySelector } from './StrategySelector';
 import { PTOInput } from './PTOInput';
 import { TimeframeSelector, type TimeframeType } from './TimeframeSelector';
 import { CompanyHolidays } from './CompanyHolidays';
-import { setTotalPTODays, getTotalPTODays } from '../../services/ptoTracking';
-import type { VacationStrategy, CompanyHoliday, PlanningConfig } from '../../utils/types';
+import { setTotalPTODays, getRemainingPTODays } from '../../services/ptoTracking';
+import type { CompanyHoliday, PlanningConfig } from '../../utils/types';
 import './PlanningConfigPanel.css';
 
 interface PlanningConfigPanelProps {
@@ -19,16 +18,16 @@ export const PlanningConfigPanel = ({
   onConfigChange,
   onOptimize,
 }: PlanningConfigPanelProps) => {
-  const handleStrategyChange = (strategy: VacationStrategy) => {
-    onConfigChange({ ...config, strategy });
-  };
-  
   const handlePTODaysChange = (days: number) => {
-    // If this is the first time setting PTO, save it as total
-    if (days > 0 && getTotalPTODays() === 0) {
+    // Always replace Total PTO when updated (not add)
+    if (days > 0) {
       setTotalPTODays(days);
+      // Recalculate remaining days
+      const remaining = getRemainingPTODays();
+      onConfigChange({ ...config, availablePTODays: remaining });
+    } else {
+      onConfigChange({ ...config, availablePTODays: days });
     }
-    onConfigChange({ ...config, availablePTODays: days });
   };
   
   const handleTimeframeTypeChange = (type: TimeframeType) => {
@@ -124,16 +123,6 @@ export const PlanningConfigPanel = ({
         
         <div className="config-step">
           <div className="step-number">3</div>
-          <div className="step-content">
-            <StrategySelector
-              value={config.strategy}
-              onChange={handleStrategyChange}
-            />
-          </div>
-        </div>
-        
-        <div className="config-step">
-          <div className="step-number">4</div>
           <div className="step-content">
             <CompanyHolidays
               holidays={config.companyHolidays}

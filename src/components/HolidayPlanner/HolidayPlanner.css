@@ -2,3 +2,53 @@
   width: 100%;
 }
 
+.pto-display-section {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.pto-display-description {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.pto-display-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.pto-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pto-stat-label {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.pto-stat-value {
+  font-weight: 600;
+  font-size: 16px;
+  color: #667eea;
+}
+
+.pto-stat-value.pto-zero {
+  color: #d32f2f;
+}
+
+.pto-stat-value.pto-low {
+  color: #f57c00;
+}
+
+.strategy-selector-section {
+  margin-bottom: 24px;
+}
+

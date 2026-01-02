@@ -1,9 +1,10 @@
 import { getAllPlans, deletePlan } from '../../services/planStorage';
+import { getAllOverlappingDates } from '../../utils/planOverlap';
 import type { HolidayPlan } from '../../utils/types';
 import { PlanCard } from './PlanCard';
 import { PlanForm } from './PlanForm';
 import { ShareModal } from './ShareModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './PlanList.css';
 
 interface PlanListProps {
@@ -61,11 +62,51 @@ export const PlanList = ({
     setShowForm(true);
   };
   
+  // Calculate overlap statistics
+  const overlapStats = useMemo(() => {
+    if (plans.length === 0) return null;
+    
+    const overlappingDates = getAllOverlappingDates(plans);
+    const totalOverlappingDates = overlappingDates.size;
+    const totalUniqueDays = new Set<string>();
+    plans.forEach(plan => {
+      plan.vacationDays.forEach(day => {
+        if (day && typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+          totalUniqueDays.add(day.trim());
+        }
+      });
+    });
+    
+    return {
+      totalOverlappingDates,
+      totalUniqueDays: totalUniqueDays.size,
+      totalDaysAcrossPlans: plans.reduce((sum, plan) => sum + plan.vacationDays.length, 0),
+    };
+  }, [plans]);
+  
   return (
     <div className="plan-list">
       <div className="plan-list-header">
         <h2>Saved Plans</h2>
       </div>
+      
+      {plans.length > 0 && overlapStats && overlapStats.totalOverlappingDates > 0 && (
+        <div className="overlap-summary">
+          <div className="overlap-summary-header">
+            <span className="overlap-summary-icon">⚠️</span>
+            <span className="overlap-summary-title">Overlap Detected</span>
+          </div>
+          <div className="overlap-summary-content">
+            <p>
+              <strong>{overlapStats.totalOverlappingDates}</strong> date{overlapStats.totalOverlappingDates !== 1 ? 's' : ''} appear in multiple plans.
+              Only <strong>{overlapStats.totalUniqueDays}</strong> unique day{overlapStats.totalUniqueDays !== 1 ? 's' : ''} count toward your PTO.
+            </p>
+            <p className="overlap-summary-note">
+              Total days across all plans: {overlapStats.totalDaysAcrossPlans} | Unique days: {overlapStats.totalUniqueDays}
+            </p>
+          </div>
+        </div>
+      )}
       
       {showForm && editingPlan && (
         <PlanForm
@@ -92,6 +133,7 @@ export const PlanList = ({
             <PlanCard
               key={plan.id}
               plan={plan}
+              allPlans={plans}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onSelect={onSelectPlan}

@@ -32,6 +32,7 @@
   cursor: pointer;
   transition: all 0.2s;
   background-color: white;
+  position: relative;
 }
 
 .strategy-option:hover {
@@ -42,6 +43,50 @@
 .strategy-option.selected {
   border-color: #007bff;
   background-color: #e7f3ff;
+}
+
+.strategy-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.strategy-option.disabled:hover {
+  border-color: #e0e0e0;
+  background-color: #f5f5f5;
+}
+
+.strategy-option.disabled .strategy-radio input[type="radio"] {
+  cursor: not-allowed;
+}
+
+.strategy-used-badge {
+  font-size: 12px;
+  font-weight: 400;
+  color: #999;
+  font-style: italic;
+}
+
+.strategy-apply-button {
+  padding: 8px 16px;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.strategy-apply-button:hover {
+  background-color: #5568d3;
+}
+
+.strategy-apply-button:active {
+  background-color: #4457b8;
 }
 
 .strategy-radio {

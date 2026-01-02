@@ -1,4 +1,6 @@
 import { formatDateDisplay, isWeekendDay } from '../../utils/dateUtils';
+import { detectPlanOverlaps } from '../../utils/planOverlap';
+import { getAllPlans } from '../../services/planStorage';
 import type { HolidayPlan, PublicHoliday } from '../../utils/types';
 import { eachDayOfInterval, parseISO, subDays, addDays, isWeekend, format } from 'date-fns';
 import './PlanBreakdown.css';
@@ -80,10 +82,36 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
   }
 
   const totalDaysOff = vacationDaysList.length + holidaysInPeriod.length + weekendsInPeriod.length;
+  
+  // Check for overlaps with other plans
+  const allPlans = getAllPlans();
+  const overlapInfo = detectPlanOverlaps(plan, allPlans);
+  const hasOverlaps = overlapInfo.overlapCount > 0;
 
   return (
     <div className="plan-breakdown">
       <h3>Plan Breakdown: {plan.name}</h3>
+      
+      {hasOverlaps && (
+        <div className="breakdown-overlap-warning">
+          <div className="breakdown-overlap-header">
+            <span className="breakdown-overlap-icon">⚠️</span>
+            <span className="breakdown-overlap-text">
+              {overlapInfo.overlapCount} date{overlapInfo.overlapCount !== 1 ? 's' : ''} in this plan overlap with other saved plans
+            </span>
+          </div>
+          <div className="breakdown-overlapping-plans">
+            <span className="breakdown-overlap-label">Overlaps with:</span>
+            <div className="breakdown-overlap-plan-names">
+              {overlapInfo.overlappingPlans.map(overlapPlan => (
+                <span key={overlapPlan.planId} className="breakdown-overlap-plan-name">
+                  {overlapPlan.planName}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="breakdown-summary">
         <div className="summary-item">
           <span className="summary-label">Vacation Days (to take off):</span>

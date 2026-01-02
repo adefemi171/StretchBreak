@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getTotalPTODays, getRemainingPTODays } from '../../services/ptoTracking';
+import { getTotalPTODays, getRemainingPTODays, getAvailablePTODaysInput, setAvailablePTODaysInput, setTotalPTODays } from '../../services/ptoTracking';
 import './PTOInput.css';
 
 interface PTOInputProps {
@@ -9,10 +9,10 @@ interface PTOInputProps {
 }
 
 export const PTOInput = ({ value, onChange, showRemaining = true }: PTOInputProps) => {
-  const totalPTO = getTotalPTODays();
-  const remainingPTO = getRemainingPTODays();
-  const hasSavedPTO = totalPTO > 0;
-  const [inputValue, setInputValue] = useState<string>(value === 0 ? '' : value.toString());
+  const [inputValue, setInputValue] = useState<string>(() => {
+    const persisted = getAvailablePTODaysInput();
+    return persisted > 0 ? persisted.toString() : (value === 0 ? '' : value.toString());
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const isTypingRef = useRef<boolean>(false);
   
@@ -55,6 +55,12 @@ export const PTOInput = ({ value, onChange, showRemaining = true }: PTOInputProp
     } else {
       // Valid value, update parent
       setInputValue(numValue.toString());
+      // Persist the input value
+      setAvailablePTODaysInput(numValue);
+      // Replace Total PTO (not add)
+      if (numValue > 0) {
+        setTotalPTODays(numValue);
+      }
       onChange(numValue);
     }
   };
@@ -62,40 +68,23 @@ export const PTOInput = ({ value, onChange, showRemaining = true }: PTOInputProp
   return (
     <div className="pto-input">
       <label htmlFor="pto-days" className="pto-label">
-        {hasSavedPTO ? 'Remaining PTO Days' : 'Available PTO Days'}
+        Available PTO Days
       </label>
       <p className="pto-description">
-        {hasSavedPTO 
-          ? `You have ${remainingPTO} remaining PTO days out of ${totalPTO} total. The app will optimize using your remaining days.`
-          : 'Enter how many paid time off days you have available. The app will optimize their use.'}
+        Enter how many paid time off days you have available. The app will optimize their use.
       </p>
-      {hasSavedPTO && showRemaining ? (
-        <div className="pto-display">
-          <div className="pto-stat">
-            <span className="pto-stat-label">Total PTO:</span>
-            <span className="pto-stat-value">{totalPTO}</span>
-          </div>
-          <div className="pto-stat">
-            <span className="pto-stat-label">Remaining:</span>
-            <span className={`pto-stat-value ${remainingPTO === 0 ? 'pto-zero' : remainingPTO < 5 ? 'pto-low' : ''}`}>
-              {remainingPTO}
-            </span>
-          </div>
-        </div>
-      ) : (
-        <input
-          ref={inputRef}
-          id="pto-days"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={inputValue}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          className="pto-input-field"
-          placeholder="Enter PTO days"
-        />
-      )}
+      <input
+        ref={inputRef}
+        id="pto-days"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={inputValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        className="pto-input-field"
+        placeholder="Enter PTO days"
+      />
     </div>
   );
 };

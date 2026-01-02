@@ -45,3 +45,16 @@ export const clearAllPlans = (): void => {
   localStorage.removeItem(STORAGE_KEY);
 };
 
+export const getUsedStrategies = (): string[] => {
+  const plans = getAllPlans();
+  const usedStrategies = new Set<string>();
+  
+  plans.forEach(plan => {
+    if (plan.strategy) {
+      usedStrategies.add(plan.strategy);
+    }
+  });
+  
+  return Array.from(usedStrategies);
+};
+

@@ -4,6 +4,8 @@ import './StrategySelector.css';
 interface StrategySelectorProps {
   value?: VacationStrategy;
   onChange: (strategy: VacationStrategy) => void;
+  disabledStrategies?: string[];
+  onApplyStrategy?: (strategy: VacationStrategy) => void;
 }
 
 const strategies: Array<{
@@ -38,33 +40,56 @@ const strategies: Array<{
   },
 ];
 
-export const StrategySelector = ({ value, onChange }: StrategySelectorProps) => {
+export const StrategySelector = ({ value, onChange, disabledStrategies = [], onApplyStrategy }: StrategySelectorProps) => {
+  const handleApplyClick = (e: React.MouseEvent, strategy: VacationStrategy) => {
+    e.stopPropagation();
+    if (onApplyStrategy) {
+      onApplyStrategy(strategy);
+    }
+  };
+
   return (
     <div className="strategy-selector">
       <label className="strategy-label">Choose Your Strategy (Optional)</label>
       <p className="strategy-subtitle">Select how you'd like to distribute your time off</p>
       <div className="strategy-options">
-        {strategies.map((strategy) => (
-          <div
-            key={strategy.value}
-            className={`strategy-option ${value === strategy.value ? 'selected' : ''}`}
-            onClick={() => onChange(strategy.value)}
-          >
-            <div className="strategy-radio">
-              <input
-                type="radio"
-                name="strategy"
-                value={strategy.value}
-                checked={value === strategy.value}
-                onChange={() => onChange(strategy.value)}
-              />
+        {strategies.map((strategy) => {
+          const isDisabled = disabledStrategies.includes(strategy.value);
+          return (
+            <div
+              key={strategy.value}
+              className={`strategy-option ${value === strategy.value ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+              onClick={() => !isDisabled && onChange(strategy.value)}
+            >
+              <div className="strategy-radio">
+                <input
+                  type="radio"
+                  name="strategy"
+                  value={strategy.value}
+                  checked={value === strategy.value}
+                  disabled={isDisabled}
+                  onChange={() => !isDisabled && onChange(strategy.value)}
+                />
+              </div>
+              <div className="strategy-content">
+                <div className="strategy-name">
+                  {strategy.label}
+                  {isDisabled && <span className="strategy-used-badge"> (Already Used)</span>}
+                </div>
+                <div className="strategy-description">{strategy.description}</div>
+              </div>
+              {!isDisabled && onApplyStrategy && (
+                <button
+                  className="strategy-apply-button"
+                  onClick={(e) => handleApplyClick(e, strategy.value)}
+                  title="Apply this strategy and save to plans"
+                >
+                  Apply Strategy
+                </button>
+              )}
             </div>
-            <div className="strategy-content">
-              <div className="strategy-name">{strategy.label}</div>
-              <div className="strategy-description">{strategy.description}</div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

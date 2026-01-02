@@ -13,6 +13,60 @@
   font-size: 1.25rem;
 }
 
+.breakdown-overlap-warning {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 6px;
+}
+
+.breakdown-overlap-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #856404;
+  font-size: 14px;
+}
+
+.breakdown-overlap-icon {
+  font-size: 18px;
+}
+
+.breakdown-overlap-text {
+  flex: 1;
+}
+
+.breakdown-overlapping-plans {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: #856404;
+}
+
+.breakdown-overlap-label {
+  font-weight: 600;
+}
+
+.breakdown-overlap-plan-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.breakdown-overlap-plan-name {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: white;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
 .breakdown-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

@@ -3,6 +3,7 @@ import type { HolidayPlan } from '../utils/types';
 
 const TOTAL_PTO_KEY = 'total-pto-days';
 const INITIAL_PTO_KEY = 'initial-pto-days';
+const AVAILABLE_PTO_INPUT_KEY = 'available-pto-input';
 
 /**
  * Set the total available PTO days for the year
@@ -33,18 +34,38 @@ export const getInitialPTODays = (): number => {
 
 /**
  * Calculate total PTO used across all saved plans
+ * Counts unique vacation days across all plans (weekdays only, excluding holidays and weekends)
  */
 export const getUsedPTODays = (): number => {
   const plans = getAllPlans();
-  let totalUsed = 0;
   
   // Count unique vacation days across all plans
+  // Vacation days are already stored as weekdays in YYYY-MM-DD format
   const allVacationDays = new Set<string>();
   
   plans.forEach(plan => {
-    plan.vacationDays.forEach(day => {
-      allVacationDays.add(day);
-    });
+    if (plan.vacationDays && Array.isArray(plan.vacationDays)) {
+      plan.vacationDays.forEach(day => {
+        if (day && typeof day === 'string') {
+          // Dates should already be in YYYY-MM-DD format
+          // Validate format and add to set
+          if (/^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+            allVacationDays.add(day.trim());
+          } else {
+            // Try to normalize if format is different
+            try {
+              const date = new Date(day);
+              if (!isNaN(date.getTime())) {
+                const normalized = date.toISOString().split('T')[0];
+                allVacationDays.add(normalized);
+              }
+            } catch (error) {
+              console.warn('Error normalizing vacation day:', day, error);
+            }
+          }
+        }
+      });
+    }
   });
   
   return allVacationDays.size;
@@ -81,5 +102,21 @@ export const resetPTOTracking = (): void => {
 export const resetAllPTOData = (): void => {
   localStorage.removeItem(TOTAL_PTO_KEY);
   localStorage.removeItem(INITIAL_PTO_KEY);
+  localStorage.removeItem(AVAILABLE_PTO_INPUT_KEY);
+};
+
+/**
+ * Get the available PTO input value (persisted separately)
+ */
+export const getAvailablePTODaysInput = (): number => {
+  const stored = localStorage.getItem(AVAILABLE_PTO_INPUT_KEY);
+  return stored ? parseInt(stored, 10) : 0;
+};
+
+/**
+ * Set the available PTO input value (persisted separately)
+ */
+export const setAvailablePTODaysInput = (value: number): void => {
+  localStorage.setItem(AVAILABLE_PTO_INPUT_KEY, value.toString());
 };
 

@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { eachDayOfInterval, isSameDay, isPast, parseISO, startOfDay } from 'date-fns';
 import { Calendar } from '../Calendar/Calendar';
 import { PlanSuggestions } from './PlanSuggestions';
+import { StrategySelector } from '../PlanningConfig/StrategySelector';
 import { findOptimalVacationPeriods } from '../../utils/planningAlgorithm';
 import { formatDate, parseDateString } from '../../utils/dateUtils';
-import type { PublicHoliday, PlanSuggestion, CompanyHoliday } from '../../utils/types';
+import { getTotalPTODays, getRemainingPTODays } from '../../services/ptoTracking';
+import type { PublicHoliday, PlanSuggestion, CompanyHoliday, VacationStrategy } from '../../utils/types';
 import './HolidayPlanner.css';
 
 interface HolidayPlannerProps {
@@ -17,6 +19,9 @@ interface HolidayPlannerProps {
   focusOnDates?: string[];
   strategy?: string;
   availablePTODays?: number;
+  usedStrategies?: string[];
+  onStrategyChange?: (strategy: VacationStrategy) => void;
+  onApplyStrategy?: (strategy: VacationStrategy) => void;
   onAutoSave?: (plan: { name: string; vacationDays: string[]; strategy?: string; availablePTODays?: number }) => void;
 }
 
@@ -30,6 +35,9 @@ export const HolidayPlanner = ({
   focusOnDates,
   strategy,
   availablePTODays,
+  usedStrategies = [],
+  onStrategyChange,
+  onApplyStrategy,
   onAutoSave,
 }: HolidayPlannerProps) => {
   const [internalSelectedDates, setInternalSelectedDates] = useState<string[]>([]);
@@ -157,8 +165,44 @@ export const HolidayPlanner = ({
     return !isPast(holidayDate) || isSameDay(holidayDate, today);
   });
   
+  // PTO Display
+  const totalPTO = getTotalPTODays();
+  const remainingPTO = getRemainingPTODays();
+  const showPTODisplay = totalPTO > 0;
+  
   return (
     <div className="holiday-planner">
+      {showPTODisplay && (
+        <div className="pto-display-section">
+          <p className="pto-display-description">
+            You have {remainingPTO} remaining PTO days out of {totalPTO} total. The app will optimize using your remaining days.
+          </p>
+          <div className="pto-display-stats">
+            <div className="pto-stat">
+              <span className="pto-stat-label">Total PTO:</span>
+              <span className="pto-stat-value">{totalPTO}</span>
+            </div>
+            <div className="pto-stat">
+              <span className="pto-stat-label">Remaining:</span>
+              <span className={`pto-stat-value ${remainingPTO === 0 ? 'pto-zero' : remainingPTO < 5 ? 'pto-low' : ''}`}>
+                {remainingPTO}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {onStrategyChange && (
+        <div className="strategy-selector-section">
+          <StrategySelector
+            value={strategy as VacationStrategy | undefined}
+            onChange={onStrategyChange}
+            disabledStrategies={usedStrategies}
+            onApplyStrategy={onApplyStrategy}
+          />
+        </div>
+      )}
+      
       <PlanSuggestions
         suggestions={allSuggestions}
         onApplySuggestion={handleApplySuggestion}
