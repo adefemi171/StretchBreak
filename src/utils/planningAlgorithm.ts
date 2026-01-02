@@ -1,5 +1,5 @@
 import type { PublicHoliday, PlanSuggestion } from './types';
-import { parseISO, addDays, subDays, isWeekend, format, getDay, eachDayOfInterval } from 'date-fns';
+import { parseISO, addDays, subDays, isWeekend, format, getDay } from 'date-fns';
 
 export const findOptimalVacationPeriods = (
   holidays: PublicHoliday[],
@@ -174,57 +174,27 @@ export const calculateEfficiency = (
 ): { vacationDaysUsed: number; totalDaysOff: number } => {
   const vacationDaysUsed = vacationDays.length;
   
-  if (vacationDays.length === 0) {
-    return { vacationDaysUsed: 0, totalDaysOff: 0 };
-  }
+  // Count total days off including weekends and holidays
+  const allDays = new Set<string>(vacationDays);
   
-  // Get date range from first to last vacation day
-  const sortedDates = [...vacationDays].sort();
-  let startDate = parseISO(sortedDates[0]);
-  let endDate = parseISO(sortedDates[sortedDates.length - 1]);
-  
-  // Extend range to include adjacent holidays and weekends that create continuous break
-  // Check for holidays/weekends immediately before the first vacation day
-  let checkDate = subDays(startDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
+  // Add weekends within vacation period
+  vacationDays.forEach(dateStr => {
+    const date = parseISO(dateStr);
+    const saturday = addDays(date, (6 - getDay(date)) % 7);
+    const sunday = addDays(saturday, 1);
     
-    if (isHoliday || isWeekendDay) {
-      startDate = checkDate;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
+    if (getDay(date) !== 0 && getDay(date) !== 6) {
+      allDays.add(format(saturday, 'yyyy-MM-dd'));
+      allDays.add(format(sunday, 'yyyy-MM-dd'));
     }
-  }
-  
-  // Check for holidays/weekends immediately after the last vacation day
-  checkDate = addDays(endDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
-    
-    if (isHoliday || isWeekendDay) {
-      endDate = checkDate;
-      checkDate = addDays(checkDate, 1);
-    } else {
-      break;
-    }
-  }
-  
-  // Get all days in the extended range
-  const allDaysInRange = eachDayOfInterval({ start: startDate, end: endDate });
-  const allDaysSet = new Set<string>();
-  
-  // Add all days in the continuous break period
-  allDaysInRange.forEach(day => {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    allDaysSet.add(dateStr);
   });
   
-  const totalDaysOff = allDaysSet.size;
+  // Add public holidays
+  holidays.forEach(holiday => {
+    allDays.add(holiday.date);
+  });
+  
+  const totalDaysOff = allDays.size;
   
   return { vacationDaysUsed, totalDaysOff };
 };

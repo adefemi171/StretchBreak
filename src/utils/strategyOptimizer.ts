@@ -5,7 +5,7 @@ interface OptimizationParams {
   holidays: PublicHoliday[];
   companyHolidays: CompanyHoliday[];
   availablePTODays: number;
-  strategy?: VacationStrategy;
+  strategy: VacationStrategy;
   startDate: Date;
   endDate: Date;
 }
@@ -14,7 +14,7 @@ interface OptimizationParams {
  * Optimize vacation days based on strategy
  */
 export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[] => {
-  const { holidays, companyHolidays, availablePTODays, strategy = 'balanced', startDate, endDate } = params;
+  const { holidays, companyHolidays, availablePTODays, strategy, startDate, endDate } = params;
   
   const allHolidays = [
     ...holidays.map(h => ({ date: h.date, name: h.localName, isPublic: true })),
@@ -36,33 +36,25 @@ export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[]
 function findVacationPeriods(
   holidays: Array<{ date: string; name: string; isPublic: boolean }>,
   strategy: VacationStrategy,
-  _startDate: Date,
-  _endDate: Date
+  startDate: Date,
+  endDate: Date
 ): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = [];
   const sortedHolidays = [...holidays]
     .map(h => ({ ...h, dateObj: parseISO(h.date) }))
     .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   
-  // Generate suggestions around holidays
   for (let i = 0; i < sortedHolidays.length; i++) {
     const holiday = sortedHolidays[i];
     const holidayDate = holiday.dateObj;
     const dayOfWeek = getDay(holidayDate);
-    
-    // Check for consecutive holidays (e.g., Dec 25-26)
-    const nextHoliday = i < sortedHolidays.length - 1 ? sortedHolidays[i + 1] : null;
-    const daysBetween = nextHoliday 
-      ? Math.round((nextHoliday.dateObj.getTime() - holidayDate.getTime()) / (1000 * 60 * 60 * 24))
-      : null;
-    const isConsecutiveHoliday = daysBetween === 1;
     
     // Strategy-specific logic
     switch (strategy) {
       case 'long-weekends':
         // Focus on 3-4 day weekends
         if (dayOfWeek === 4 || dayOfWeek === 5) { // Thu or Fri
-          const suggestion = createLongWeekendSuggestion(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
+          const suggestion = createLongWeekendSuggestion(holiday, sortedHolidays, i);
           if (suggestion) suggestions.push(suggestion);
         }
         break;
@@ -70,7 +62,7 @@ function findVacationPeriods(
       case 'mini-breaks':
         // 5-6 day breaks
         if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-          const suggestion = createMiniBreakSuggestion(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
+          const suggestion = createMiniBreakSuggestion(holiday, sortedHolidays, i);
           if (suggestion) suggestions.push(suggestion);
         }
         break;
@@ -90,7 +82,7 @@ function findVacationPeriods(
       case 'balanced':
       default:
         // Mix of all types
-        const balanced = createBalancedSuggestions(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
+        const balanced = createBalancedSuggestions(holiday, sortedHolidays, i);
         suggestions.push(...balanced);
         break;
     }
@@ -102,8 +94,7 @@ function findVacationPeriods(
 function createLongWeekendSuggestion(
   holiday: any,
   _allHolidays: any[],
-  _index: number,
-  nextHoliday?: any
+  _index: number
 ): PlanSuggestion | null {
   const holidayDate = holiday.dateObj;
   const dayOfWeek = getDay(holidayDate);
@@ -113,23 +104,13 @@ function createLongWeekendSuggestion(
     const wednesday = subDays(holidayDate, 1);
     const vacationDays = getWeekdaysBetween(monday, wednesday);
     
-    // Include next holiday if it's consecutive
-    let endDate = addDays(holidayDate, 1);
-    let totalDaysOff = vacationDays.length + 2; // Mon-Wed + Thu + Fri
-    if (nextHoliday) {
-      endDate = nextHoliday.dateObj;
-      totalDaysOff = vacationDays.length + 2 + 1; // Add the next holiday
-    }
-    
     return {
       startDate: format(monday, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd'),
+      endDate: format(addDays(holidayDate, 1), 'yyyy-MM-dd'),
       vacationDaysUsed: vacationDays.length,
-      totalDaysOff: totalDaysOff,
-      efficiency: totalDaysOff / vacationDays.length,
-      reason: nextHoliday 
-        ? `Long weekend: Mon-Wed before ${holiday.name} and ${nextHoliday.name}`
-        : `Long weekend: Mon-Wed before ${holiday.name}`,
+      totalDaysOff: vacationDays.length + 2,
+      efficiency: (vacationDays.length + 2) / vacationDays.length,
+      reason: `Long weekend: Mon-Wed before ${holiday.name}`,
       publicHolidaysIncluded: [],
     };
   }
@@ -139,23 +120,13 @@ function createLongWeekendSuggestion(
     const thursday = subDays(holidayDate, 1);
     const vacationDays = getWeekdaysBetween(monday, thursday);
     
-    // Include next holiday if it's consecutive (e.g., Dec 26)
-    let endDate = holidayDate;
-    let totalDaysOff = vacationDays.length + 1; // Mon-Thu + Fri
-    if (nextHoliday) {
-      endDate = nextHoliday.dateObj;
-      totalDaysOff = vacationDays.length + 1 + 1; // Add the next holiday (e.g., Dec 26)
-    }
-    
     return {
       startDate: format(monday, 'yyyy-MM-dd'),
-      endDate: format(endDate, 'yyyy-MM-dd'),
+      endDate: format(holidayDate, 'yyyy-MM-dd'),
       vacationDaysUsed: vacationDays.length,
-      totalDaysOff: totalDaysOff,
-      efficiency: totalDaysOff / vacationDays.length,
-      reason: nextHoliday 
-        ? `Long weekend: Mon-Thu before ${holiday.name} and ${nextHoliday.name}`
-        : `Long weekend: Mon-Thu before ${holiday.name}`,
+      totalDaysOff: vacationDays.length + 1,
+      efficiency: (vacationDays.length + 1) / vacationDays.length,
+      reason: `Long weekend: Mon-Thu before ${holiday.name}`,
       publicHolidaysIncluded: [],
     };
   }
@@ -166,8 +137,7 @@ function createLongWeekendSuggestion(
 function createMiniBreakSuggestion(
   holiday: any,
   _allHolidays: any[],
-  _index: number,
-  nextHoliday?: any
+  _index: number
 ): PlanSuggestion | null {
   const holidayDate = holiday.dateObj;
   const dayOfWeek = getDay(holidayDate);
@@ -175,13 +145,7 @@ function createMiniBreakSuggestion(
   // Create 5-6 day breaks
   if (dayOfWeek >= 1 && dayOfWeek <= 3) {
     const start = subDays(holidayDate, dayOfWeek === 1 ? 0 : dayOfWeek - 1);
-    let end = addDays(holidayDate, 5 - dayOfWeek);
-    
-    // Include next holiday if it's consecutive
-    if (nextHoliday) {
-      end = nextHoliday.dateObj;
-    }
-    
+    const end = addDays(holidayDate, 5 - dayOfWeek);
     const vacationDays = getWeekdaysBetween(start, end).filter(d => {
       const date = parseISO(d);
       return date < holidayDate || date > holidayDate;
@@ -191,11 +155,9 @@ function createMiniBreakSuggestion(
       startDate: format(start, 'yyyy-MM-dd'),
       endDate: format(end, 'yyyy-MM-dd'),
       vacationDaysUsed: vacationDays.length,
-      totalDaysOff: vacationDays.length + (nextHoliday ? 2 : 1),
-      efficiency: (vacationDays.length + (nextHoliday ? 2 : 1)) / vacationDays.length,
-      reason: nextHoliday 
-        ? `Mini break around ${holiday.name} and ${nextHoliday.name}`
-        : `Mini break around ${holiday.name}`,
+      totalDaysOff: vacationDays.length + 1,
+      efficiency: (vacationDays.length + 1) / vacationDays.length,
+      reason: `Mini break around ${holiday.name}`,
       publicHolidaysIncluded: [],
     };
   }
@@ -268,16 +230,15 @@ function createExtendedSuggestion(
 function createBalancedSuggestions(
   holiday: any,
   allHolidays: any[],
-  index: number,
-  nextHoliday?: any
+  index: number
 ): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = [];
   
   // Mix of different types
-  const longWeekend = createLongWeekendSuggestion(holiday, allHolidays, index, nextHoliday);
+  const longWeekend = createLongWeekendSuggestion(holiday, allHolidays, index);
   if (longWeekend) suggestions.push(longWeekend);
   
-  const miniBreak = createMiniBreakSuggestion(holiday, allHolidays, index, nextHoliday);
+  const miniBreak = createMiniBreakSuggestion(holiday, allHolidays, index);
   if (miniBreak) suggestions.push(miniBreak);
   
   return suggestions;
@@ -299,18 +260,30 @@ function getWeekdaysBetween(start: Date, end: Date): string[] {
 
 function optimizePTODistribution(
   periods: PlanSuggestion[],
-  _availablePTODays: number,
+  availablePTODays: number,
   _strategy: VacationStrategy
 ): PlanSuggestion[] {
-  // Sort by start date (chronologically) to show suggestions throughout the year
+  // Sort by strategy preferences
   const sorted = [...periods].sort((a, b) => {
-    const dateA = parseISO(a.startDate);
-    const dateB = parseISO(b.startDate);
-    return dateA.getTime() - dateB.getTime();
+    // Prioritize by total days off
+    if (b.totalDaysOff !== a.totalDaysOff) {
+      return b.totalDaysOff - a.totalDaysOff;
+    }
+    // Then by fewer vacation days used
+    return a.vacationDaysUsed - b.vacationDaysUsed;
   });
   
-  // Return all suggestions sorted chronologically, not filtered by PTO budget
-  // Users can see all opportunities and choose which ones to apply
-  return sorted.slice(0, 20); // Return top 20 suggestions
+  // Select periods that fit within available PTO days
+  const selected: PlanSuggestion[] = [];
+  let usedDays = 0;
+  
+  for (const period of sorted) {
+    if (usedDays + period.vacationDaysUsed <= availablePTODays) {
+      selected.push(period);
+      usedDays += period.vacationDaysUsed;
+    }
+  }
+  
+  return selected.slice(0, 10); // Return top 10 suggestions
 }
 

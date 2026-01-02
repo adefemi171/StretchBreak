@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { addMonths, subMonths, parseISO, startOfMonth } from 'date-fns';
+import { useState } from 'react';
+import { addMonths, subMonths } from 'date-fns';
 import type { PublicHoliday, CompanyHoliday } from '../../utils/types';
 import { CalendarMonth } from './CalendarMonth';
 import './Calendar.css';
@@ -11,8 +11,6 @@ interface CalendarProps {
   companyHolidays?: CompanyHoliday[];
   onDateClick: (date: Date) => void;
   year: number;
-  initialMonth?: Date;
-  focusOnDates?: string[];
 }
 
 export const Calendar = ({
@@ -22,46 +20,9 @@ export const Calendar = ({
   companyHolidays = [],
   onDateClick,
   year,
-  initialMonth,
-  focusOnDates,
 }: CalendarProps) => {
-  // Calculate initial month from focusOnDates if provided
-  const getInitialMonth = (): Date => {
-    if (initialMonth) {
-      return startOfMonth(initialMonth);
-    }
-    if (focusOnDates && focusOnDates.length > 0) {
-      const sortedDates = [...focusOnDates].sort();
-      const firstDate = parseISO(sortedDates[0]);
-      return startOfMonth(firstDate);
-    }
-    return new Date(year, 0, 1);
-  };
-
-  const [currentMonth, setCurrentMonth] = useState(() => getInitialMonth());
+  const [currentMonth, setCurrentMonth] = useState(new Date(year, 0, 1));
   const [viewMode, setViewMode] = useState<'single' | 'triple'>('single');
-
-  // Update current month when focusOnDates or initialMonth changes
-  useEffect(() => {
-    const newMonth = getInitialMonth();
-    setCurrentMonth(newMonth);
-    
-    // If focusOnDates spans multiple months, switch to triple view
-    if (focusOnDates && focusOnDates.length > 0) {
-      const sortedDates = [...focusOnDates].sort();
-      const firstDate = parseISO(sortedDates[0]);
-      const lastDate = parseISO(sortedDates[sortedDates.length - 1]);
-      const firstMonth = startOfMonth(firstDate);
-      const lastMonth = startOfMonth(lastDate);
-      
-      // If dates span more than 1 month, use triple view
-      if (firstMonth.getTime() !== lastMonth.getTime()) {
-        setViewMode('triple');
-      } else {
-        setViewMode('single');
-      }
-    }
-  }, [focusOnDates, initialMonth, year]);
   
   const handlePreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));

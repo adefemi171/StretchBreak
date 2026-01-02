@@ -44,14 +44,6 @@
   margin-bottom: 0.25rem;
 }
 
-.stat-value.warning {
-  color: #dc3545;
-}
-
-.stat-value.low {
-  color: #ffc107;
-}
-
 .stat-description {
   font-size: 12px;
   color: #666;
