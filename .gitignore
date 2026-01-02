@@ -25,3 +25,9 @@ dist-ssr
 
 .env
 node_modules
+# Local Netlify folder
+.netlify
+
+# Compiled JavaScript files (TypeScript project)
+src/**/*.js
+src/**/*.js.map

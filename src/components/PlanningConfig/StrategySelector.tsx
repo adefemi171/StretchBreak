@@ -2,7 +2,7 @@ import type { VacationStrategy } from '../../utils/types';
 import './StrategySelector.css';
 
 interface StrategySelectorProps {
-  value: VacationStrategy;
+  value?: VacationStrategy;
   onChange: (strategy: VacationStrategy) => void;
 }
 

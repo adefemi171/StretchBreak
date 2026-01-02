@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "date-fns": "^4.1.0",
+    "netlify-cli": "^23.13.0",
     "openai": "^6.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
