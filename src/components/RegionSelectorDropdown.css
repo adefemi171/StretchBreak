@@ -1,0 +1,34 @@
+.region-selector-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.region-selector-dropdown label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.region-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.region-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.region-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+

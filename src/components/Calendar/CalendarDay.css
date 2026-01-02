@@ -1,0 +1,86 @@
+.calendar-day {
+  min-height: 70px;
+  padding: 6px 4px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  position: relative;
+  background-color: #fff;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.calendar-day.empty {
+  background-color: #f5f5f5;
+  cursor: default;
+}
+
+.calendar-day.other-month {
+  background-color: #f9f9f9;
+  color: #999;
+}
+
+.calendar-day.weekend {
+  background-color: #f0f0f0;
+}
+
+.calendar-day.holiday {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+}
+
+.calendar-day.company-holiday {
+  background-color: #d4edda;
+  border-color: #28a745;
+}
+
+.calendar-day.suggested {
+  background-color: #d1ecf1;
+  border-color: #17a2b8;
+}
+
+.calendar-day.selected {
+  background-color: #cce5ff;
+  border-color: #007bff;
+  font-weight: bold;
+}
+
+.calendar-day.selectable:hover {
+  background-color: #e3f2fd;
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.holiday-name {
+  font-size: 9px;
+  color: #856404;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.company-holiday-name {
+  font-size: 9px;
+  color: #155724;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.selected-indicator {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  color: #007bff;
+  font-weight: bold;
+}
+

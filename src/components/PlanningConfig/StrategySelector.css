@@ -1,0 +1,74 @@
+.strategy-selector {
+  margin-bottom: 2rem;
+}
+
+.strategy-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.strategy-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 1rem 0;
+}
+
+.strategy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.strategy-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.strategy-option:hover {
+  border-color: #007bff;
+  background-color: #f8f9ff;
+}
+
+.strategy-option.selected {
+  border-color: #007bff;
+  background-color: #e7f3ff;
+}
+
+.strategy-radio {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.strategy-radio input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.strategy-content {
+  flex: 1;
+}
+
+.strategy-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.strategy-description {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+

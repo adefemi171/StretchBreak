@@ -1,0 +1,139 @@
+.plan-card {
+  padding: 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.plan-card-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.action-button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.action-button.select {
+  background-color: #007bff;
+  color: white;
+}
+
+.action-button.select:hover {
+  background-color: #0056b3;
+}
+
+.action-button.edit {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.action-button.edit:hover {
+  background-color: #e0a800;
+}
+
+.action-button.share {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.action-button.share:hover {
+  background-color: #138496;
+}
+
+.action-button.delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.action-button.delete:hover {
+  background-color: #c82333;
+}
+
+.plan-description {
+  color: #666;
+  margin: 0 0 1rem 0;
+  font-size: 14px;
+}
+
+.plan-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.detail-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.plan-footer {
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.plan-date {
+  font-size: 12px;
+  color: #999;
+}
+
+@media (max-width: 600px) {
+  .plan-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .plan-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .action-button {
+    flex: 1;
+    min-width: calc(50% - 0.2rem);
+  }
+}
+

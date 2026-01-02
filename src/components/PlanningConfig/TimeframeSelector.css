@@ -1,0 +1,110 @@
+.timeframe-selector {
+  margin-bottom: 2rem;
+}
+
+.timeframe-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.timeframe-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 1rem 0;
+}
+
+.timeframe-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timeframe-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.timeframe-option:hover {
+  border-color: #007bff;
+  background-color: #f8f9ff;
+}
+
+.timeframe-option.selected {
+  border-color: #007bff;
+  background-color: #e7f3ff;
+}
+
+.timeframe-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.timeframe-content {
+  flex: 1;
+}
+
+.timeframe-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.timeframe-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.year-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.custom-dates {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-input-group label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.date-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
