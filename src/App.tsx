@@ -4,7 +4,6 @@ import { Calendar } from './components/Calendar/Calendar';
 import { StatsPanel } from './components/Statistics/StatsPanel';
 import { PlanList } from './components/PlanManager/PlanList';
 import { PlanBreakdown } from './components/PlanManager/PlanBreakdown';
-import { NaturalLanguageInput } from './components/AI/NaturalLanguageInput';
 import { ChatAssistant } from './components/AI/ChatAssistant';
 import { PlanningConfigPanel } from './components/PlanningConfig/PlanningConfigPanel';
 import { ExportPanel } from './components/Export/ExportPanel';
@@ -151,9 +150,6 @@ function App() {
     alert('Plan saved successfully!');
   };
 
-  const handleNaturalLanguageSuccess = (_parsed: any) => {
-  };
-  
   const handleOptimize = () => {
     if (planningConfig.availablePTODays === 0) {
       alert('Please enter your available PTO days');
@@ -396,20 +392,6 @@ function App() {
                     ← Back to Configuration
                   </button>
                 </div>
-                
-                {isAIAvailable && (
-                  <NaturalLanguageInput
-                    holidays={holidays.filter(holiday => {
-                      const today = startOfDay(new Date());
-                      const holidayDate = startOfDay(parseISO(holiday.date));
-                      return !isPast(holidayDate) || isSameDay(holidayDate, today);
-                    })}
-                    year={year}
-                    preferences={preferences}
-                    onParseSuccess={handleNaturalLanguageSuccess}
-                    onError={(error) => alert(error)}
-                  />
-                )}
                 
                 {aiLoading && (
                   <div className="loading-message">
