@@ -36,3 +36,36 @@
   color: #999;
 }
 
+.pto-display {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.5rem;
+}
+
+.pto-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pto-stat-label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pto-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #007bff;
+}
+
+.pto-stat-value.pto-low {
+  color: #ff9800;
+}
+
+.pto-stat-value.pto-zero {
+  color: #f44336;
+}
+

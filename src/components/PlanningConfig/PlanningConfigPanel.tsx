@@ -2,6 +2,7 @@ import { StrategySelector } from './StrategySelector';
 import { PTOInput } from './PTOInput';
 import { TimeframeSelector, type TimeframeType } from './TimeframeSelector';
 import { CompanyHolidays } from './CompanyHolidays';
+import { setTotalPTODays, getTotalPTODays } from '../../services/ptoTracking';
 import type { VacationStrategy, CompanyHoliday, PlanningConfig } from '../../utils/types';
 import './PlanningConfigPanel.css';
 
@@ -23,6 +24,10 @@ export const PlanningConfigPanel = ({
   };
   
   const handlePTODaysChange = (days: number) => {
+    // If this is the first time setting PTO, save it as total
+    if (days > 0 && getTotalPTODays() === 0) {
+      setTotalPTODays(days);
+    }
     onConfigChange({ ...config, availablePTODays: days });
   };
   
@@ -96,6 +101,7 @@ export const PlanningConfigPanel = ({
             <PTOInput
               value={config.availablePTODays}
               onChange={handlePTODaysChange}
+              showRemaining={true}
             />
           </div>
         </div>

@@ -12,6 +12,7 @@ interface PlanListProps {
   currentHolidays: any[];
   currentCountryCode: string;
   currentYear: number;
+  onPlanDeleted?: () => void;
 }
 
 export const PlanList = ({
@@ -20,6 +21,7 @@ export const PlanList = ({
   currentHolidays,
   currentCountryCode,
   currentYear,
+  onPlanDeleted,
 }: PlanListProps) => {
   const [plans, setPlans] = useState<HolidayPlan[]>([]);
   const [editingPlan, setEditingPlan] = useState<HolidayPlan | undefined>();
@@ -47,6 +49,10 @@ export const PlanList = ({
     if (confirm('Are you sure you want to delete this plan?')) {
       deletePlan(id);
       loadPlans();
+      // Notify parent to recalculate remaining PTO
+      if (onPlanDeleted) {
+        onPlanDeleted();
+      }
     }
   };
   
@@ -55,21 +61,13 @@ export const PlanList = ({
     setShowForm(true);
   };
   
-  const handleNewPlan = () => {
-    setEditingPlan(undefined);
-    setShowForm(true);
-  };
-  
   return (
     <div className="plan-list">
       <div className="plan-list-header">
         <h2>Saved Plans</h2>
-        <button onClick={handleNewPlan} className="new-plan-button">
-          + New Plan
-        </button>
       </div>
       
-      {showForm && (
+      {showForm && editingPlan && (
         <PlanForm
           plan={editingPlan}
           vacationDays={currentVacationDays}
@@ -86,10 +84,7 @@ export const PlanList = ({
       
       {plans.length === 0 && !showForm ? (
         <div className="empty-state">
-          <p>No saved plans yet. Create your first plan!</p>
-          <button onClick={handleNewPlan} className="new-plan-button">
-            Create Plan
-          </button>
+          <p>No saved plans yet. Go to the Planner tab to create your first plan!</p>
         </div>
       ) : (
         <div className="plans-grid">

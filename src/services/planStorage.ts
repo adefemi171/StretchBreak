@@ -41,3 +41,7 @@ export const createPlanId = (): string => {
   return `plan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+export const clearAllPlans = (): void => {
+  localStorage.removeItem(STORAGE_KEY);
+};
+

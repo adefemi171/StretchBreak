@@ -113,11 +113,12 @@ export const HolidayPlanner = ({
         };
         const planName = strategyLabels[strategy] || strategy;
         
+        // Get remaining PTO from the callback context
         onAutoSave({
           name: planName,
           vacationDays: sortedDates,
           strategy,
-          availablePTODays,
+          availablePTODays: availablePTODays || 0,
         });
         
         // Show feedback that plan was auto-saved
