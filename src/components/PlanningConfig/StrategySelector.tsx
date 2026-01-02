@@ -2,7 +2,7 @@ import type { VacationStrategy } from '../../utils/types';
 import './StrategySelector.css';
 
 interface StrategySelectorProps {
-  value: VacationStrategy;
+  value?: VacationStrategy;
   onChange: (strategy: VacationStrategy) => void;
 }
 
@@ -41,7 +41,7 @@ const strategies: Array<{
 export const StrategySelector = ({ value, onChange }: StrategySelectorProps) => {
   return (
     <div className="strategy-selector">
-      <label className="strategy-label">Choose Your Strategy</label>
+      <label className="strategy-label">Choose Your Strategy (Optional)</label>
       <p className="strategy-subtitle">Select how you'd like to distribute your time off</p>
       <div className="strategy-options">
         {strategies.map((strategy) => (

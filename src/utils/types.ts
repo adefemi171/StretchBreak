@@ -74,7 +74,7 @@ export interface CompanyHoliday {
 
 export interface PlanningConfig {
   availablePTODays: number;
-  strategy: VacationStrategy;
+  strategy?: VacationStrategy;
   timeframe: {
     type: 'calendar-year' | 'custom';
     startDate?: string;

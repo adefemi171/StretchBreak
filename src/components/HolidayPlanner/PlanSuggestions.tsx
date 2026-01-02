@@ -5,11 +5,13 @@ import './PlanSuggestions.css';
 interface PlanSuggestionsProps {
   suggestions: PlanSuggestion[];
   onApplySuggestion: (suggestion: PlanSuggestion) => void;
+  appliedFeedback?: string | null;
 }
 
 export const PlanSuggestions = ({
   suggestions,
   onApplySuggestion,
+  appliedFeedback,
 }: PlanSuggestionsProps) => {
   if (suggestions.length === 0) {
     return (
@@ -50,10 +52,15 @@ export const PlanSuggestions = ({
             </div>
             <p className="suggestion-reason">{suggestion.reason}</p>
             <button
-              className="apply-button"
-              onClick={() => onApplySuggestion(suggestion)}
+              type="button"
+              className={`apply-button ${appliedFeedback ? 'applied' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onApplySuggestion(suggestion);
+              }}
             >
-              Apply This Plan
+              {appliedFeedback || 'Apply This Plan'}
             </button>
           </div>
         ))}

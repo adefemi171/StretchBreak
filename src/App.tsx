@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HolidayPlanner } from './components/HolidayPlanner/HolidayPlanner';
+import { Calendar } from './components/Calendar/Calendar';
 import { StatsPanel } from './components/Statistics/StatsPanel';
 import { PlanList } from './components/PlanManager/PlanList';
+import { PlanBreakdown } from './components/PlanManager/PlanBreakdown';
 import { NaturalLanguageInput } from './components/AI/NaturalLanguageInput';
 import { ChatAssistant } from './components/AI/ChatAssistant';
 import { PlanningConfigPanel } from './components/PlanningConfig/PlanningConfigPanel';
@@ -17,8 +19,8 @@ import { createPlanId } from './services/planStorage';
 import { getSharedPlanFromUrl } from './services/shareService';
 import { optimizeByStrategy } from './utils/strategyOptimizer';
 import { filterHolidaysByRegions } from './utils/holidayFilter';
-import { formatDate, parseDateString } from './utils/dateUtils';
-import { startOfYear, endOfYear } from 'date-fns';
+import { parseDateString } from './utils/dateUtils';
+import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay } from 'date-fns';
 import type { HolidayPlan, PlanningConfig } from './utils/types';
 import './App.css';
 
@@ -31,9 +33,9 @@ function App() {
   const [selectedPlan, setSelectedPlan] = useState<HolidayPlan | null>(null);
   const [activeTab, setActiveTab] = useState<'planner' | 'plans' | 'chat'>('planner');
   const [shouldApplyAutoDetect, setShouldApplyAutoDetect] = useState(true);
+  const plannerViewRef = useRef<HTMLDivElement>(null);
   const [planningConfig, setPlanningConfig] = useState<PlanningConfig>({
     availablePTODays: 0,
-    strategy: 'balanced',
     timeframe: {
       type: 'calendar-year',
       year: new Date().getFullYear(),
@@ -179,11 +181,18 @@ function App() {
         : new Date();
     }
     
+    // Filter out past holidays before generating suggestions
+    const today = startOfDay(new Date());
+    const futureHolidays = holidays.filter(holiday => {
+      const holidayDate = startOfDay(parseISO(holiday.date));
+      return !isPast(holidayDate) || isSameDay(holidayDate, today);
+    });
+    
     const suggestions = optimizeByStrategy({
-      holidays,
+      holidays: futureHolidays,
       companyHolidays: planningConfig.companyHolidays,
       availablePTODays: planningConfig.availablePTODays,
-      strategy: planningConfig.strategy,
+      strategy: planningConfig.strategy || 'balanced',
       startDate,
       endDate,
     });
@@ -191,24 +200,11 @@ function App() {
     setOptimizedSuggestions(suggestions);
     setShowConfig(false);
     
-    if (suggestions.length > 0) {
-      const topSuggestion = suggestions[0];
-      const start = new Date(topSuggestion.startDate);
-      const end = new Date(topSuggestion.endDate);
-      const dates: string[] = [];
-      
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = formatDate(d);
-        const isHoliday = holidays.some(h => h.date === dateStr) ||
-          planningConfig.companyHolidays.some(h => h.date === dateStr);
-        const dayOfWeek = d.getDay();
-        if (!isHoliday && dayOfWeek !== 0 && dayOfWeek !== 6) {
-          dates.push(dateStr);
-        }
-      }
-      
-      setSelectedDates(dates);
-    }
+    setTimeout(() => {
+      plannerViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    
+    // Removed auto-apply logic - users should choose which suggestion to apply
   };
 
   return (
@@ -274,7 +270,7 @@ function App() {
       
       <main className="app-main">
         {activeTab === 'planner' && (
-          <div className="planner-view">
+          <div className="planner-view" ref={plannerViewRef}>
             {showConfig ? (
               <>
                 <PlanningConfigPanel
@@ -295,7 +291,50 @@ function App() {
                   </div>
                 )}
               </>
+            ) : selectedPlan ? (
+              // View mode for saved plan - show only breakdown and calendar
+              <>
+                <div className="config-header">
+                  <button
+                    onClick={() => {
+                      setSelectedPlan(null);
+                      setActiveTab('plans');
+                    }}
+                    className="back-button"
+                  >
+                    ← Back to Saved Plans
+                  </button>
+                </div>
+                
+                <PlanBreakdown
+                  plan={selectedPlan}
+                  holidays={holidays}
+                />
+                
+                <StatsPanel
+                  vacationDays={selectedDates}
+                  holidays={holidays}
+                  availablePTODays={selectedPlan.availablePTODays}
+                />
+                
+                <div className="holiday-planner">
+                  <Calendar
+                    selectedDates={selectedDates}
+                    suggestedDates={[]}
+                    holidays={holidays.filter(holiday => {
+                      const today = startOfDay(new Date());
+                      const holidayDate = startOfDay(parseISO(holiday.date));
+                      return !isPast(holidayDate) || isSameDay(holidayDate, today);
+                    })}
+                    companyHolidays={planningConfig.companyHolidays}
+                    onDateClick={() => {}}
+                    year={year}
+                    focusOnDates={selectedPlan.vacationDays}
+                  />
+                </div>
+              </>
             ) : (
+              // Normal planning mode - show suggestions and input
               <>
                 <div className="config-header">
                   <button
@@ -308,7 +347,11 @@ function App() {
                 
                 {isAIAvailable && (
                   <NaturalLanguageInput
-                    holidays={holidays}
+                    holidays={holidays.filter(holiday => {
+                      const today = startOfDay(new Date());
+                      const holidayDate = startOfDay(parseISO(holiday.date));
+                      return !isPast(holidayDate) || isSameDay(holidayDate, today);
+                    })}
                     year={year}
                     preferences={preferences}
                     onParseSuccess={handleNaturalLanguageSuccess}
@@ -329,7 +372,11 @@ function App() {
                 )}
                 
                 <HolidayPlanner
-                  holidays={holidays}
+                  holidays={holidays.filter(holiday => {
+                    const today = startOfDay(new Date());
+                    const holidayDate = startOfDay(parseISO(holiday.date));
+                    return !isPast(holidayDate) || isSameDay(holidayDate, today);
+                  })}
                   companyHolidays={planningConfig.companyHolidays}
                   year={year}
                   suggestions={optimizedSuggestions.length > 0 ? optimizedSuggestions : aiSuggestions}
@@ -340,6 +387,7 @@ function App() {
                 <StatsPanel
                   vacationDays={selectedDates}
                   holidays={holidays}
+                  availablePTODays={planningConfig.availablePTODays}
                 />
                 
                 {selectedDates.length > 0 && (

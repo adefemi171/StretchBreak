@@ -1,6 +1,15 @@
 import type { HolidayPlan } from '../utils/types';
 import { formatDateDisplay, parseDateString } from '../utils/dateUtils';
-import { getOpenAI } from './aiService';
+
+// Use Netlify Functions to proxy OpenAI API calls (API key stays server-side)
+const getNetlifyFunctionUrl = (functionName: string): string => {
+  // In development, use local Netlify dev server
+  // In production, use the deployed function URL
+  if (import.meta.env.DEV) {
+    return `http://localhost:8888/.netlify/functions/${functionName}`;
+  }
+  return `/.netlify/functions/${functionName}`;
+};
 
 export const generateOOOMessageAI = async (
   plan: HolidayPlan,
@@ -13,94 +22,36 @@ export const generateOOOMessageAI = async (
   } = {}
 ): Promise<string> => {
   const { includeDates = true, includeBackDate = true, tone = 'professional' } = options;
-  
-  const openai = await getOpenAI();
-  
-  if (!openai) {
-    return generateOOOMessageTemplate(plan, startDate, endDate, options);
-  }
-  
-  const backDate = new Date(parseDateString(endDate));
-  backDate.setDate(backDate.getDate() + 1);
-  
-  const dateRange = includeDates
-    ? `${formatDateDisplay(startDate)} - ${formatDateDisplay(endDate)}`
-    : 'this period';
-  
-  const backDateStr = includeBackDate ? formatDateDisplay(backDate.toISOString().split('T')[0]) : '';
-  
-  const toneDescription = {
-    professional: 'professional and formal',
-    casual: 'friendly and casual',
-    brief: 'concise and brief',
-  }[tone];
-  
-  const requirements: string[] = [];
-  if (tone === 'brief') {
-    requirements.push('- Keep it very short and concise (1-2 sentences max)');
-  } else if (tone === 'professional') {
-    requirements.push('- Use formal business language');
-    requirements.push('- Mention limited email access');
-    requirements.push('- Include professional closing');
-  } else if (tone === 'casual') {
-    requirements.push('- Use friendly, conversational language');
-    requirements.push('- Keep it warm and approachable');
-  }
-  requirements.push('- Include a placeholder for alternative contact (use [alternative contact])');
-  if (includeBackDate) {
-    requirements.push('- Mention when you will be back');
-  }
-  requirements.push('- Do NOT include email signatures or subject lines');
-  requirements.push('- Return ONLY the message body text');
-
-  const promptParts: string[] = [
-    'Generate an out-of-office email message with the following requirements:',
-    '',
-    `- Tone: ${toneDescription}`,
-    `- Date range: ${dateRange}`,
-  ];
-  
-  if (includeBackDate) {
-    promptParts.push(`- Return date: ${backDateStr}`);
-  }
-  
-  promptParts.push(`- Plan name: ${plan.name}`);
-  
-  if (plan.description) {
-    promptParts.push(`- Description: ${plan.description}`);
-  }
-  
-  promptParts.push('');
-  promptParts.push('Requirements:');
-  promptParts.push(...requirements);
-  promptParts.push('');
-  promptParts.push('Generate the message:');
-  
-  const prompt = promptParts.join('\n');
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that generates professional out-of-office email messages. Return only the message body text, no subject lines or signatures.',
+    const response = await fetch(getNetlifyFunctionUrl('generate-ooo-message'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        plan: {
+          name: plan.name,
+          description: plan.description,
         },
-        {
-          role: 'user',
-          content: prompt,
+        startDate,
+        endDate,
+        options: {
+          includeDates,
+          includeBackDate,
+          tone,
         },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
+      }),
     });
-    
-    const message = completion.choices[0]?.message?.content?.trim();
-    if (message) {
-      return message;
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Error generating OOO message:', errorData.error);
+      return generateOOOMessageTemplate(plan, startDate, endDate, options);
     }
-    
-    return generateOOOMessageTemplate(plan, startDate, endDate, options);
+
+    const data = await response.json();
+    return data.message || generateOOOMessageTemplate(plan, startDate, endDate, options);
   } catch (error) {
     console.error('Error generating OOO message with AI:', error);
     return generateOOOMessageTemplate(plan, startDate, endDate, options);
