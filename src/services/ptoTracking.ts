@@ -60,7 +60,7 @@ export const getUsedPTODays = (): number => {
                 allVacationDays.add(normalized);
               }
             } catch (error) {
-              console.warn('Error normalizing vacation day:', day, error);
+              // Silently skip invalid date
             }
           }
         }

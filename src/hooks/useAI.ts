@@ -24,7 +24,6 @@ export const useAI = () => {
       setAiSuggestions(suggestions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate AI suggestions');
-      console.error('AI suggestions error:', err);
     } finally {
       setLoading(false);
     }

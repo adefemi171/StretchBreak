@@ -106,7 +106,6 @@ Return ONLY valid JSON in this format:
       body: JSON.stringify(parsed),
     };
   } catch (error) {
-    console.error('Error parsing natural language:', error);
     return {
       statusCode: 500,
       headers: {

@@ -18,7 +18,6 @@ export const encodePlanForSharing = (plan: HolidayPlan): string => {
     const jsonString = JSON.stringify(shareablePlan);
     return btoa(encodeURIComponent(jsonString));
   } catch (error) {
-    console.error('Error encoding plan:', error);
     throw new Error('Failed to encode plan for sharing');
   }
 };
@@ -34,7 +33,6 @@ export const decodeSharedPlan = (encoded: string): Partial<HolidayPlan> | null =
     
     return plan;
   } catch (error) {
-    console.error('Error decoding shared plan:', error);
     return null;
   }
 };
@@ -74,7 +72,6 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
       return successful;
     }
   } catch (error) {
-    console.error('Error copying to clipboard:', error);
     return false;
   }
 };

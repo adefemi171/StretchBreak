@@ -686,6 +686,7 @@ function App() {
                       createdAt: new Date().toISOString(),
                       updatedAt: new Date().toISOString(),
                     }}
+                    currentSelectedDates={selectedDates}
                   />
                 )}
                 
@@ -738,6 +739,11 @@ function App() {
                 vacationDays={selectedDates}
                 holidays={holidays}
                 availablePTODays={selectedPlan.availablePTODays}
+              />
+              
+              <ExportPanel
+                plan={selectedPlan}
+                currentSelectedDates={selectedDates}
               />
               
               <div className="holiday-planner">

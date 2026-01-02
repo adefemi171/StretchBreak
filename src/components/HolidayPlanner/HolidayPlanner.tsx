@@ -149,7 +149,6 @@ export const HolidayPlanner = ({
         }, 100);
       }
     } catch (error) {
-      console.error('Error applying suggestion:', error);
       alert('Error applying suggestion: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };

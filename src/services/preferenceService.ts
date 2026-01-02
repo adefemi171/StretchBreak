@@ -10,7 +10,7 @@ export const getUserPreferences = (): UserPreferences => {
       return JSON.parse(stored);
     }
   } catch (error) {
-    console.error('Error reading preferences:', error);
+    // Return default preferences on error
   }
   
   // Return default preferences

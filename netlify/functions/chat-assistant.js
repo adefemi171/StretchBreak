@@ -85,7 +85,6 @@ Provide helpful, concise responses. Suggest optimal vacation periods, explain ef
       body: JSON.stringify({ response }),
     };
   } catch (error) {
-    console.error('Error in chat:', error);
     return {
       statusCode: 500,
       headers: {

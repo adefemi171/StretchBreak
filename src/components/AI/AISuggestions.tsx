@@ -32,7 +32,6 @@ export const AISuggestions = ({
         setSuggestions(aiSuggestions);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load AI suggestions');
-        console.error('AI suggestions error:', err);
       } finally {
         setLoading(false);
       }

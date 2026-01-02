@@ -115,7 +115,6 @@ export const detectCountryFromIP = async (): Promise<string | null> => {
 export const detectCountryFromGeolocation = async (): Promise<string | null> => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      console.warn('Geolocation is not supported by this browser');
       resolve(null);
       return;
     }
@@ -166,16 +165,11 @@ export const detectCountryFromGeolocation = async (): Promise<string | null> => 
             
             resolve(null);
           } catch (error) {
-            console.error('Error reverse geocoding:', error);
             resolve(null);
           }
         },
         (error) => {
           clearTimeout(timeoutId);
-          // Don't log errors from browser extensions or user denial
-          if (error.code !== error.PERMISSION_DENIED) {
-            console.warn('Geolocation error:', error);
-          }
           resolve(null);
         },
         {
@@ -186,7 +180,6 @@ export const detectCountryFromGeolocation = async (): Promise<string | null> => 
       );
     } catch (error) {
       clearTimeout(timeoutId);
-      console.warn('Geolocation not available:', error);
       resolve(null);
     }
   });

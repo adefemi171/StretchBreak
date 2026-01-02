@@ -56,7 +56,6 @@ export const parseNaturalLanguage = async (
     const data = await response.json();
     return data.parsed as ParsedRequest;
   } catch (error) {
-    console.error('Error parsing natural language:', error);
     throw error;
   }
 };
@@ -87,7 +86,6 @@ export const generateAISuggestions = async (
     const data = await response.json();
     return data.suggestions as PlanSuggestion[];
   } catch (error) {
-    console.error('Error generating AI suggestions:', error);
     throw error;
   }
 };
@@ -126,7 +124,6 @@ export const chatWithAssistant = async (
     const data = await response.json();
     return data.reply || 'I apologize, I could not generate a response.';
   } catch (error) {
-    console.error('Error in chat:', error);
     throw error;
   }
 };

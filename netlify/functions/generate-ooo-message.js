@@ -115,7 +115,6 @@ Generate the message:`;
       body: JSON.stringify({ message }),
     };
   } catch (error) {
-    console.error('Error generating OOO message:', error);
     return {
       statusCode: 500,
       headers: {

@@ -33,7 +33,6 @@ export const fetchPublicHolidays = async (
     
     return data;
   } catch (error) {
-    console.error('Error fetching public holidays:', error);
     throw error;
   }
 };
@@ -48,7 +47,6 @@ export const getAvailableCountries = async (): Promise<Array<{ countryCode: stri
     
     return await response.json();
   } catch (error) {
-    console.error('Error fetching countries:', error);
     // Return some common countries as fallback
     return [
       { countryCode: 'US', name: 'United States' },

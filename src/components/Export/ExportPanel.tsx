@@ -1,14 +1,16 @@
 import { downloadICal } from '../../services/calendarExport';
 import { generatePlanOOOMessage } from '../../services/oooMessage';
+import { getAllPlans } from '../../services/planStorage';
 import type { HolidayPlan } from '../../utils/types';
 import { useState } from 'react';
 import './ExportPanel.css';
 
 interface ExportPanelProps {
   plan: HolidayPlan;
+  currentSelectedDates?: string[];
 }
 
-export const ExportPanel = ({ plan }: ExportPanelProps) => {
+export const ExportPanel = ({ plan, currentSelectedDates }: ExportPanelProps) => {
   const [oooMessage, setOooMessage] = useState('');
   const [oooTone, setOooTone] = useState<'professional' | 'casual' | 'brief'>('professional');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -20,15 +22,19 @@ export const ExportPanel = ({ plan }: ExportPanelProps) => {
     setOooMessage('');
     
     try {
+      // Get all saved plans (excluding the current plan if it's already saved)
+      const allSavedPlans = getAllPlans().filter(savedPlan => savedPlan.id !== plan.id);
+      
       const message = await generatePlanOOOMessage(plan, {
         tone: oooTone,
         includeDates: true,
         includeBackDate: true,
+        allSavedPlans,
+        currentSelectedDates,
       });
       setOooMessage(message);
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate message');
-      console.error('Error generating OOO message:', error);
     } finally {
       setIsGenerating(false);
     }

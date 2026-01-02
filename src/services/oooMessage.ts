@@ -45,15 +45,12 @@ export const generateOOOMessageAI = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('Error generating OOO message:', errorData.error);
       return generateOOOMessageTemplate(plan, startDate, endDate, options);
     }
 
     const data = await response.json();
     return data.message || generateOOOMessageTemplate(plan, startDate, endDate, options);
   } catch (error) {
-    console.error('Error generating OOO message with AI:', error);
     return generateOOOMessageTemplate(plan, startDate, endDate, options);
   }
 };
@@ -116,15 +113,50 @@ export const generatePlanOOOMessage = async (
     includeDates?: boolean;
     includeBackDate?: boolean;
     tone?: 'professional' | 'casual' | 'brief';
+    allSavedPlans?: HolidayPlan[];
+    currentSelectedDates?: string[];
   }
 ): Promise<string> => {
-  if (plan.vacationDays.length === 0) {
+  // Collect all vacation days from:
+  // 1. The current plan
+  // 2. All saved plans (if provided)
+  // 3. Current selected dates (if provided)
+  const allVacationDays = new Set<string>();
+  
+  // Add days from the current plan
+  plan.vacationDays.forEach(day => allVacationDays.add(day));
+  
+  // Add days from all saved plans
+  if (options?.allSavedPlans) {
+    options.allSavedPlans.forEach(savedPlan => {
+      savedPlan.vacationDays.forEach(day => allVacationDays.add(day));
+    });
+  }
+  
+  // Add current selected dates (from optimal vacation suggestions)
+  if (options?.currentSelectedDates) {
+    options.currentSelectedDates.forEach(day => allVacationDays.add(day));
+  }
+  
+  if (allVacationDays.size === 0) {
     return 'No vacation days selected.';
   }
   
-  const sortedDates = [...plan.vacationDays].sort();
+  const sortedDates = Array.from(allVacationDays).sort();
   const startDate = sortedDates[0];
   const endDate = sortedDates[sortedDates.length - 1];
   
-  return generateOOOMessageAI(plan, startDate, endDate, options);
+  // Create a combined plan name for the OOO message
+  const totalPlansCount = (options?.allSavedPlans?.length || 0) + 1;
+  const combinedPlanName = options?.allSavedPlans && options.allSavedPlans.length > 0
+    ? `Vacation (${totalPlansCount} plan${totalPlansCount > 1 ? 's' : ''})`
+    : plan.name;
+  
+  const combinedPlan: HolidayPlan = {
+    ...plan,
+    name: combinedPlanName,
+    vacationDays: sortedDates,
+  };
+  
+  return generateOOOMessageAI(combinedPlan, startDate, endDate, options);
 };

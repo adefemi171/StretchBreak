@@ -21,7 +21,6 @@ export const getAllPlans = (): HolidayPlan[] => {
     if (!stored) return [];
     return JSON.parse(stored);
   } catch (error) {
-    console.error('Error reading plans from storage:', error);
     return [];
   }
 };

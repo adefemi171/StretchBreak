@@ -120,7 +120,6 @@ Return ONLY valid JSON array:
       body: JSON.stringify(suggestions),
     };
   } catch (error) {
-    console.error('Error generating AI suggestions:', error);
     return {
       statusCode: 500,
       headers: {
