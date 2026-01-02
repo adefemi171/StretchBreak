@@ -77,6 +77,11 @@ function App() {
     return !hasSavedPlansWithPTO();
   });
   
+  // Clear optimized suggestions when year or country changes to prevent stale data
+  useEffect(() => {
+    setOptimizedSuggestions([]);
+  }, [year, countryCode]);
+  
   const { holidays: allHolidays, loading: holidaysLoading, error: holidaysError } = useHolidays(year, countryCode);
   
   const holidays = planningConfig.selectedRegions && planningConfig.selectedRegions.length > 0
@@ -104,10 +109,11 @@ function App() {
   }, [plans]);
 
   useEffect(() => {
-    if (holidays.length > 0 && isAIAvailable) {
+    // Only generate AI suggestions if holidays are loaded and not loading
+    if (holidays.length > 0 && !holidaysLoading && isAIAvailable) {
       generateSuggestions(holidays, year, preferences);
     }
-  }, [holidays.length, year, isAIAvailable]);
+  }, [holidays.length, holidaysLoading, year, isAIAvailable]);
   
   useEffect(() => {
     localStorage.setItem('lastCountryCode', countryCode);
@@ -136,6 +142,7 @@ function App() {
   }, [addPlan]);
   
   useEffect(() => {
+    // If detection succeeded, update country
     if (detectedCountry && shouldApplyAutoDetect) {
       setCountryCode(detectedCountry);
       setShouldApplyAutoDetect(false);
@@ -619,10 +626,15 @@ function App() {
                   holidays={holidays.filter(holiday => {
                     const today = startOfDay(new Date());
                     const holidayDate = startOfDay(parseISO(holiday.date));
-                    return !isPast(holidayDate) || isSameDay(holidayDate, today);
+                    // Filter by year first, then by past dates
+                    const holidayYear = holidayDate.getFullYear();
+                    const isInYear = holidayYear === year;
+                    const isFutureOrToday = !isPast(holidayDate) || isSameDay(holidayDate, today);
+                    return isInYear && isFutureOrToday;
                   })}
                   companyHolidays={planningConfig.companyHolidays}
                   year={year}
+                  holidaysLoading={holidaysLoading}
                   suggestions={optimizedSuggestions.length > 0 ? optimizedSuggestions : aiSuggestions}
                   selectedDates={selectedDates}
                   onDateChange={setSelectedDates}

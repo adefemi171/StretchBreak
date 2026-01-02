@@ -12,9 +12,18 @@ export const fetchPublicHolidays = async (
   const cacheKey = `${year}-${countryCode}`;
   const cached = cache.get(cacheKey);
   
-  // Return cached data if still valid
+  // Return cached data if still valid and matches the requested year
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data;
+    // Validate cached data matches the requested year
+    const allMatchYear = cached.data.every(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate.getFullYear() === year;
+    });
+    if (allMatchYear) {
+      return cached.data;
+    }
+    // If cached data doesn't match year, clear it and fetch fresh
+    cache.delete(cacheKey);
   }
   
   try {
@@ -28,10 +37,16 @@ export const fetchPublicHolidays = async (
     
     const data: PublicHoliday[] = await response.json();
     
-    // Cache the result
-    cache.set(cacheKey, { data, timestamp: Date.now() });
+    // Validate that all holidays are from the requested year
+    const validatedData = data.filter(holiday => {
+      const holidayDate = new Date(holiday.date);
+      return holidayDate.getFullYear() === year;
+    });
     
-    return data;
+    // Cache the validated result
+    cache.set(cacheKey, { data: validatedData, timestamp: Date.now() });
+    
+    return validatedData;
   } catch (error) {
     throw error;
   }

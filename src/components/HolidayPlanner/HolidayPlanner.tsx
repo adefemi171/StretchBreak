@@ -13,6 +13,7 @@ interface HolidayPlannerProps {
   holidays: PublicHoliday[];
   companyHolidays?: CompanyHoliday[];
   year: number;
+  holidaysLoading?: boolean;
   suggestions?: PlanSuggestion[];
   selectedDates?: string[];
   onDateChange?: (dates: string[]) => void;
@@ -29,6 +30,7 @@ export const HolidayPlanner = ({
   holidays,
   companyHolidays = [],
   year,
+  holidaysLoading = false,
   suggestions: externalSuggestions = [],
   selectedDates: externalSelectedDates = [],
   onDateChange,
@@ -48,28 +50,58 @@ export const HolidayPlanner = ({
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
   
   useEffect(() => {
-    if (holidays.length > 0) {
-      // Filter out past holidays before generating suggestions
-      const today = startOfDay(new Date());
-      const futureHolidays = holidays.filter(holiday => {
-        const holidayDate = startOfDay(parseISO(holiday.date));
-        return !isPast(holidayDate) || isSameDay(holidayDate, today);
-      });
-      
-      const suggestions = findOptimalVacationPeriods(futureHolidays, year);
-      setAlgorithmSuggestions(suggestions);
-      
-      const allSuggestions = externalSuggestions.length > 0 
-        ? [...externalSuggestions, ...suggestions]
-        : suggestions;
-      
-      const suggested: string[] = [];
-      allSuggestions.slice(0, 3).forEach(suggestion => {
-        suggested.push(suggestion.startDate, suggestion.endDate);
-      });
-      setSuggestedDates(suggested);
+    // Don't generate suggestions if:
+    // 1. Holidays are still loading
+    // 2. No holidays available
+    if (holidaysLoading || holidays.length === 0) {
+      setAlgorithmSuggestions([]);
+      setSuggestedDates([]);
+      return;
     }
-  }, [holidays, year, externalSuggestions]);
+    
+    // Filter holidays by year first, then filter out past holidays
+    const today = startOfDay(new Date());
+    
+    const filteredHolidays = holidays.filter(holiday => {
+      const holidayDate = startOfDay(parseISO(holiday.date));
+      // Only include holidays from the specified year
+      const holidayYear = holidayDate.getFullYear();
+      const isInYear = holidayYear === year;
+      // And only future holidays (or today)
+      const isFutureOrToday = !isPast(holidayDate) || isSameDay(holidayDate, today);
+      return isInYear && isFutureOrToday;
+    });
+    
+    // Validate: Ensure all holidays are actually from the correct year
+    // If we have holidays but none match the year, don't generate suggestions
+    const hasHolidaysForYear = filteredHolidays.length > 0;
+    const allHolidaysMatchYear = holidays.length === 0 || filteredHolidays.length === holidays.filter(h => {
+      const holidayDate = startOfDay(parseISO(h.date));
+      return holidayDate.getFullYear() === year;
+    }).length;
+    
+    // Only generate suggestions if:
+    // 1. We have holidays for the correct year
+    // 2. All holidays in the array match the year (prevents stale data)
+    if (!hasHolidaysForYear || !allHolidaysMatchYear) {
+      setAlgorithmSuggestions([]);
+      setSuggestedDates([]);
+      return;
+    }
+    
+    const suggestions = findOptimalVacationPeriods(filteredHolidays, year);
+    setAlgorithmSuggestions(suggestions);
+    
+    const allSuggestions = externalSuggestions.length > 0 
+      ? [...externalSuggestions, ...suggestions]
+      : suggestions;
+    
+    const suggested: string[] = [];
+    allSuggestions.slice(0, 3).forEach(suggestion => {
+      suggested.push(suggestion.startDate, suggestion.endDate);
+    });
+    setSuggestedDates(suggested);
+  }, [holidays, year, externalSuggestions, holidaysLoading]);
   
   const handleDateClick = (date: Date) => {
     const dateStr = formatDate(date);
@@ -153,8 +185,16 @@ export const HolidayPlanner = ({
     }
   };
   
-  const allSuggestions = externalSuggestions.length > 0
-    ? [...externalSuggestions, ...algorithmSuggestions]
+  // Filter external suggestions by year to prevent stale data from different years
+  const filteredExternalSuggestions = externalSuggestions.filter(suggestion => {
+    const suggestionYear = parseISO(suggestion.startDate).getFullYear();
+    return suggestionYear === year;
+  });
+  
+  // Combine external and algorithm suggestions, but prefer algorithm suggestions if both exist
+  // This prevents duplicates and ensures we show the most relevant suggestions
+  const allSuggestions = filteredExternalSuggestions.length > 0 && algorithmSuggestions.length === 0
+    ? filteredExternalSuggestions
     : algorithmSuggestions;
   
   // Filter out past holidays
