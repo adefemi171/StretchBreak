@@ -6,6 +6,24 @@ interface PTOInputProps {
 }
 
 export const PTOInput = ({ value, onChange }: PTOInputProps) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    
+    // Allow empty input while typing
+    if (inputValue === '') {
+      onChange(0);
+      return;
+    }
+    
+    // Parse the number
+    const numValue = parseInt(inputValue, 10);
+    
+    // Only update if it's a valid number
+    if (!isNaN(numValue) && numValue >= 0) {
+      onChange(numValue);
+    }
+  };
+
   return (
     <div className="pto-input">
       <label htmlFor="pto-days" className="pto-label">
@@ -19,8 +37,8 @@ export const PTOInput = ({ value, onChange }: PTOInputProps) => {
         type="number"
         min="0"
         max="365"
-        value={value || ''}
-        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        value={value === 0 ? '' : value}
+        onChange={handleChange}
         className="pto-input-field"
         placeholder="Enter PTO days"
       />

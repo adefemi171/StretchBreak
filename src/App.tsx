@@ -19,8 +19,8 @@ import { createPlanId } from './services/planStorage';
 import { getSharedPlanFromUrl } from './services/shareService';
 import { optimizeByStrategy } from './utils/strategyOptimizer';
 import { filterHolidaysByRegions } from './utils/holidayFilter';
-import { parseDateString } from './utils/dateUtils';
-import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay } from 'date-fns';
+import { parseDateString, formatDate } from './utils/dateUtils';
+import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay, eachDayOfInterval } from 'date-fns';
 import type { HolidayPlan, PlanningConfig } from './utils/types';
 import './App.css';
 
@@ -200,11 +200,63 @@ function App() {
     setOptimizedSuggestions(suggestions);
     setShowConfig(false);
     
+    // Auto-apply and save the top suggestion if strategy is selected
+    if (planningConfig.strategy && suggestions.length > 0) {
+      const topSuggestion = suggestions[0];
+      const start = parseDateString(topSuggestion.startDate);
+      const end = parseDateString(topSuggestion.endDate);
+      const dates: string[] = [];
+      
+      const allDays = eachDayOfInterval({ start, end });
+      
+      for (const day of allDays) {
+        const dateStr = formatDate(day);
+        const isPublicHoliday = futureHolidays.some(h => h.date === dateStr);
+        const isCompanyHoliday = planningConfig.companyHolidays.some(h => h.date === dateStr);
+        const dayOfWeek = day.getDay();
+        
+        if (!isPublicHoliday && !isCompanyHoliday && dayOfWeek !== 0 && dayOfWeek !== 6) {
+          dates.push(dateStr);
+        }
+      }
+      
+      const sortedDates = [...new Set(dates)].sort();
+      
+      if (sortedDates.length > 0) {
+        setSelectedDates(sortedDates);
+        
+        // Auto-save the plan
+        const strategyLabels: Record<string, string> = {
+          'balanced': 'Flexible Approach',
+          'long-weekends': 'Weekend Focus',
+          'mini-breaks': 'Short Getaways',
+          'week-long': 'Full Week Vacations',
+          'extended': 'Deep Breaks',
+        };
+        const planName = strategyLabels[planningConfig.strategy] || planningConfig.strategy;
+        
+        const plan: HolidayPlan = {
+          id: createPlanId(),
+          name: planName,
+          description: `Auto-saved from ${planName} strategy`,
+          countryCode,
+          year,
+          vacationDays: sortedDates,
+          publicHolidays: holidays,
+          companyHolidays: planningConfig.companyHolidays,
+          strategy: planningConfig.strategy,
+          availablePTODays: planningConfig.availablePTODays,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        
+        addPlan(plan);
+      }
+    }
+    
     setTimeout(() => {
       plannerViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-    
-    // Removed auto-apply logic - users should choose which suggestion to apply
   };
 
   return (
@@ -382,6 +434,25 @@ function App() {
                   suggestions={optimizedSuggestions.length > 0 ? optimizedSuggestions : aiSuggestions}
                   selectedDates={selectedDates}
                   onDateChange={setSelectedDates}
+                  strategy={planningConfig.strategy}
+                  availablePTODays={planningConfig.availablePTODays}
+                  onAutoSave={(planData) => {
+                    const plan: HolidayPlan = {
+                      id: createPlanId(),
+                      name: planData.name,
+                      description: `Auto-saved from ${planData.name} strategy`,
+                      countryCode,
+                      year,
+                      vacationDays: planData.vacationDays,
+                      publicHolidays: holidays,
+                      companyHolidays: planningConfig.companyHolidays,
+                      strategy: planData.strategy as any,
+                      availablePTODays: planData.availablePTODays,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+                    addPlan(plan);
+                  }}
                 />
                 
                 <StatsPanel

@@ -280,8 +280,32 @@ function optimizePTODistribution(
   _availablePTODays: number,
   _strategy: VacationStrategy
 ): PlanSuggestion[] {
+  // Deduplicate suggestions with the same start and end dates
+  // Keep the one with the best efficiency (or first one if efficiency is the same)
+  const uniqueSuggestions = new Map<string, PlanSuggestion>();
+  
+  for (const suggestion of periods) {
+    const key = `${suggestion.startDate}-${suggestion.endDate}`;
+    const existing = uniqueSuggestions.get(key);
+    
+    if (!existing) {
+      uniqueSuggestions.set(key, suggestion);
+    } else {
+      // If we have a duplicate, keep the one with better efficiency
+      // or if efficiency is the same, keep the one with more descriptive reason
+      if (suggestion.efficiency > existing.efficiency) {
+        uniqueSuggestions.set(key, suggestion);
+      } else if (suggestion.efficiency === existing.efficiency) {
+        // If efficiency is the same, prefer the one with longer reason (more descriptive)
+        if (suggestion.reason.length > existing.reason.length) {
+          uniqueSuggestions.set(key, suggestion);
+        }
+      }
+    }
+  }
+  
   // Sort by start date (chronologically) to show suggestions throughout the year
-  const sorted = [...periods].sort((a, b) => {
+  const sorted = Array.from(uniqueSuggestions.values()).sort((a, b) => {
     const dateA = parseISO(a.startDate);
     const dateB = parseISO(b.startDate);
     return dateA.getTime() - dateB.getTime();

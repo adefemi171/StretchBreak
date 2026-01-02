@@ -15,6 +15,9 @@ interface HolidayPlannerProps {
   selectedDates?: string[];
   onDateChange?: (dates: string[]) => void;
   focusOnDates?: string[];
+  strategy?: string;
+  availablePTODays?: number;
+  onAutoSave?: (plan: { name: string; vacationDays: string[]; strategy?: string; availablePTODays?: number }) => void;
 }
 
 export const HolidayPlanner = ({
@@ -25,6 +28,9 @@ export const HolidayPlanner = ({
   selectedDates: externalSelectedDates = [],
   onDateChange,
   focusOnDates,
+  strategy,
+  availablePTODays,
+  onAutoSave,
 }: HolidayPlannerProps) => {
   const [internalSelectedDates, setInternalSelectedDates] = useState<string[]>([]);
   const selectedDates = externalSelectedDates.length > 0 ? externalSelectedDates : internalSelectedDates;
@@ -96,17 +102,39 @@ export const HolidayPlanner = ({
         return;
       }
 
+      // Auto-save plan if strategy is selected and onAutoSave callback is provided
+      if (strategy && onAutoSave) {
+        const strategyLabels: Record<string, string> = {
+          'balanced': 'Flexible Approach',
+          'long-weekends': 'Weekend Focus',
+          'mini-breaks': 'Short Getaways',
+          'week-long': 'Full Week Vacations',
+          'extended': 'Deep Breaks',
+        };
+        const planName = strategyLabels[strategy] || strategy;
+        
+        onAutoSave({
+          name: planName,
+          vacationDays: sortedDates,
+          strategy,
+          availablePTODays,
+        });
+        
+        // Show feedback that plan was auto-saved
+        setAppliedFeedback('Applied & Saved!');
+      } else {
+        setAppliedFeedback('Applied!');
+      }
+
       if (onDateChange) {
         onDateChange(sortedDates);
-        setAppliedFeedback('Applied!');
-        setTimeout(() => setAppliedFeedback(null), 1500);
+        setTimeout(() => setAppliedFeedback(null), 2000);
         setTimeout(() => {
           calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
       } else {
         setInternalSelectedDates(sortedDates);
-        setAppliedFeedback('Applied!');
-        setTimeout(() => setAppliedFeedback(null), 1500);
+        setTimeout(() => setAppliedFeedback(null), 2000);
         setTimeout(() => {
           calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);

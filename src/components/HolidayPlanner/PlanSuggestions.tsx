@@ -21,8 +21,25 @@ export const PlanSuggestions = ({
     );
   }
   
+  // Deduplicate suggestions with the same start and end dates
+  const uniqueSuggestions = new Map<string, PlanSuggestion>();
+  for (const suggestion of suggestions) {
+    const key = `${suggestion.startDate}-${suggestion.endDate}`;
+    if (!uniqueSuggestions.has(key)) {
+      uniqueSuggestions.set(key, suggestion);
+    } else {
+      // If duplicate exists, keep the one with better efficiency or longer reason
+      const existing = uniqueSuggestions.get(key)!;
+      if (suggestion.efficiency > existing.efficiency) {
+        uniqueSuggestions.set(key, suggestion);
+      } else if (suggestion.efficiency === existing.efficiency && suggestion.reason.length > existing.reason.length) {
+        uniqueSuggestions.set(key, suggestion);
+      }
+    }
+  }
+  
   // Sort suggestions chronologically by start date
-  const sortedSuggestions = [...suggestions].sort((a, b) => {
+  const sortedSuggestions = Array.from(uniqueSuggestions.values()).sort((a, b) => {
     const dateA = parseDateString(a.startDate);
     const dateB = parseDateString(b.startDate);
     return dateA.getTime() - dateB.getTime();
