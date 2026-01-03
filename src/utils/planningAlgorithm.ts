@@ -6,9 +6,8 @@ export const findOptimalVacationPeriods = (
   _year: number
 ): PlanSuggestion[] => {
   const suggestions: PlanSuggestion[] = [];
-  const suggestionKeys = new Set<string>(); // Track unique suggestions by date range
+  const suggestionKeys = new Set<string>();
   
-  // Group consecutive holidays
   const sortedHolidays = [...holidays]
     .map(h => ({ ...h, dateObj: parseISO(h.date) }))
     .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
@@ -18,46 +17,39 @@ export const findOptimalVacationPeriods = (
     const holidayDate = holiday.dateObj;
     const dayOfWeek = getDay(holidayDate);
     
-    // Check for bridge opportunities
-    // If holiday is on Thursday (4), suggest Mon-Wed (3 days) to get 5 days off
-    if (dayOfWeek === 4) { // Thursday
+    if (dayOfWeek === 4) {
       const thursday = holidayDate;
       const friday = addDays(thursday, 1);
-      
-      // Check if Friday is also a holiday or weekend
       const fridayIsHoliday = sortedHolidays.some(h => 
         format(h.dateObj, 'yyyy-MM-dd') === format(friday, 'yyyy-MM-dd')
       );
       const fridayIsWeekend = isWeekend(friday);
       
-      if (fridayIsHoliday || fridayIsWeekend) {
-        // Suggest Monday-Wednesday before
-        const monday = subDays(thursday, 3);
-        const wednesday = subDays(thursday, 1);
-        
-        const vacationDays = [];
-        let current = monday;
-        while (current <= wednesday) {
-          if (!isWeekend(current)) {
-            vacationDays.push(format(current, 'yyyy-MM-dd'));
-          }
-          current = addDays(current, 1);
+      const monday = subDays(thursday, 3);
+      const wednesday = subDays(thursday, 1);
+      
+      const baseVacationDays = [];
+      let current = monday;
+      while (current <= wednesday) {
+        if (!isWeekend(current)) {
+          baseVacationDays.push(format(current, 'yyyy-MM-dd'));
         }
-        
-        const totalDaysOff = vacationDays.length + 2; // +2 for Thu-Fri
-        const efficiency = totalDaysOff / vacationDays.length;
-        
+        current = addDays(current, 1);
+      }
+      
+      if (fridayIsHoliday || fridayIsWeekend) {
+        const totalDaysOff = baseVacationDays.length + 1 + 1 + 2;
+        const efficiency = totalDaysOff / baseVacationDays.length;
         const startDateStr = format(monday, 'yyyy-MM-dd');
         const endDateStr = format(friday, 'yyyy-MM-dd');
         const suggestionKey = `${startDateStr}-${endDateStr}`;
         
-        // Only add if we haven't seen this date range before
         if (!suggestionKeys.has(suggestionKey)) {
           suggestionKeys.add(suggestionKey);
           suggestions.push({
             startDate: startDateStr,
             endDate: endDateStr,
-            vacationDaysUsed: vacationDays.length,
+            vacationDaysUsed: baseVacationDays.length,
             totalDaysOff,
             efficiency,
             reason: `Bridge Mon-Wed before ${holiday.localName} (Thu-Fri)`,
@@ -66,16 +58,48 @@ export const findOptimalVacationPeriods = (
             ) : [])],
           });
         }
+      } else {
+        const conservativeStartDateStr = format(monday, 'yyyy-MM-dd');
+        const conservativeEndDateStr = format(thursday, 'yyyy-MM-dd');
+        const conservativeKey = `${conservativeStartDateStr}-${conservativeEndDateStr}`;
+        
+        if (!suggestionKeys.has(conservativeKey)) {
+          suggestionKeys.add(conservativeKey);
+          suggestions.push({
+            startDate: conservativeStartDateStr,
+            endDate: conservativeEndDateStr,
+            vacationDaysUsed: baseVacationDays.length,
+            totalDaysOff: baseVacationDays.length + 1,
+            efficiency: (baseVacationDays.length + 1) / baseVacationDays.length,
+            reason: `Bridge Mon-Wed before ${holiday.localName} (Thursday) - 4-day break`,
+            publicHolidaysIncluded: [holiday],
+          });
+        }
+        
+        const extendedVacationDays = [...baseVacationDays, format(friday, 'yyyy-MM-dd')];
+        const extendedStartDateStr = format(monday, 'yyyy-MM-dd');
+        const extendedEndDateStr = format(friday, 'yyyy-MM-dd');
+        const extendedKey = `${extendedStartDateStr}-${extendedEndDateStr}`;
+        
+        if (!suggestionKeys.has(extendedKey)) {
+          suggestionKeys.add(extendedKey);
+          suggestions.push({
+            startDate: extendedStartDateStr,
+            endDate: extendedEndDateStr,
+            vacationDaysUsed: extendedVacationDays.length,
+            totalDaysOff: extendedVacationDays.length + 1 + 2,
+            efficiency: (extendedVacationDays.length + 1 + 2) / extendedVacationDays.length,
+            reason: `Bridge Mon-Wed + Fri before ${holiday.localName} (Thursday) - 6-day break`,
+            publicHolidaysIncluded: [holiday],
+          });
+        }
       }
     }
     
-    // If holiday is on Friday (5), suggest Mon-Thu (4 days) to get 5 days off
-    if (dayOfWeek === 5) { // Friday
+    if (dayOfWeek === 5) {
       const friday = holidayDate;
       const monday = subDays(friday, 4);
       const thursday = subDays(friday, 1);
-      
-      // Check if Monday before is also a holiday
       const mondayIsHoliday = sortedHolidays.some(h => 
         format(h.dateObj, 'yyyy-MM-dd') === format(monday, 'yyyy-MM-dd')
       );
@@ -90,14 +114,13 @@ export const findOptimalVacationPeriods = (
           current = addDays(current, 1);
         }
         
-        const totalDaysOff = vacationDays.length + 1; // +1 for Friday
+        const totalDaysOff = vacationDays.length + 1;
         const efficiency = totalDaysOff / vacationDays.length;
         
         const startDateStr = format(monday, 'yyyy-MM-dd');
         const endDateStr = format(friday, 'yyyy-MM-dd');
         const suggestionKey = `${startDateStr}-${endDateStr}`;
         
-        // Only add if we haven't seen this date range before
         if (!suggestionKeys.has(suggestionKey)) {
           suggestionKeys.add(suggestionKey);
           suggestions.push({
@@ -113,8 +136,7 @@ export const findOptimalVacationPeriods = (
       }
     }
     
-    // If holiday is on Tuesday (2), suggest Mon only to get 2 days off
-    if (dayOfWeek === 2) { // Tuesday
+    if (dayOfWeek === 2) {
       const tuesday = holidayDate;
       const monday = subDays(tuesday, 1);
       
@@ -123,7 +145,6 @@ export const findOptimalVacationPeriods = (
         const endDateStr = format(tuesday, 'yyyy-MM-dd');
         const suggestionKey = `${startDateStr}-${endDateStr}`;
         
-        // Only add if we haven't seen this date range before
         if (!suggestionKeys.has(suggestionKey)) {
           suggestionKeys.add(suggestionKey);
           suggestions.push({
@@ -139,7 +160,6 @@ export const findOptimalVacationPeriods = (
       }
     }
     
-    // Check for consecutive holidays (e.g., Thu-Fri)
     if (i < sortedHolidays.length - 1) {
       const nextHoliday = sortedHolidays[i + 1];
       const daysBetween = Math.round(
@@ -147,13 +167,11 @@ export const findOptimalVacationPeriods = (
       );
       
       if (daysBetween === 1) {
-        // Consecutive holidays
         const firstDay = holidayDate;
         const secondDay = nextHoliday.dateObj;
         const firstDayOfWeek = getDay(firstDay);
         const secondDayOfWeek = getDay(secondDay);
         
-        // If Thu-Fri, suggest Mon-Wed
         if (firstDayOfWeek === 4 && secondDayOfWeek === 5) {
           const monday = subDays(firstDay, 3);
           const wednesday = subDays(firstDay, 1);
@@ -174,8 +192,6 @@ export const findOptimalVacationPeriods = (
           const endDateStr = format(secondDay, 'yyyy-MM-dd');
           const suggestionKey = `${startDateStr}-${endDateStr}`;
           
-          // Only add if we haven't seen this date range before
-          // This prevents duplicates when a holiday matches both individual and consecutive patterns
           if (!suggestionKeys.has(suggestionKey)) {
             suggestionKeys.add(suggestionKey);
             suggestions.push({
@@ -193,7 +209,6 @@ export const findOptimalVacationPeriods = (
     }
   }
   
-  // Sort by total days off (highest first), then by vacation days used (lowest first)
   const sorted = suggestions.sort((a, b) => {
     if (b.totalDaysOff !== a.totalDaysOff) {
       return b.totalDaysOff - a.totalDaysOff;
@@ -201,8 +216,6 @@ export const findOptimalVacationPeriods = (
     return a.vacationDaysUsed - b.vacationDaysUsed;
   });
   
-  // Return top suggestions, sorted chronologically for better UX
-  // Limit to top 10 by efficiency, then sort chronologically
   const topSuggestions = sorted.slice(0, 10);
   return topSuggestions.sort((a, b) => {
     const dateA = parseISO(a.startDate);
@@ -221,13 +234,10 @@ export const calculateEfficiency = (
     return { vacationDaysUsed: 0, totalDaysOff: 0 };
   }
   
-  // Get date range from first to last vacation day
   const sortedDates = [...vacationDays].sort();
   let startDate = parseISO(sortedDates[0]);
   let endDate = parseISO(sortedDates[sortedDates.length - 1]);
   
-  // Extend range to include adjacent holidays and weekends that create continuous break
-  // Check for holidays/weekends immediately before the first vacation day
   let checkDate = subDays(startDate, 1);
   while (true) {
     const dateStr = format(checkDate, 'yyyy-MM-dd');
@@ -242,7 +252,6 @@ export const calculateEfficiency = (
     }
   }
   
-  // Check for holidays/weekends immediately after the last vacation day
   checkDate = addDays(endDate, 1);
   while (true) {
     const dateStr = format(checkDate, 'yyyy-MM-dd');
@@ -257,11 +266,9 @@ export const calculateEfficiency = (
     }
   }
   
-  // Get all days in the extended range
   const allDaysInRange = eachDayOfInterval({ start: startDate, end: endDate });
   const allDaysSet = new Set<string>();
   
-  // Add all days in the continuous break period
   allDaysInRange.forEach(day => {
     const dateStr = format(day, 'yyyy-MM-dd');
     allDaysSet.add(dateStr);

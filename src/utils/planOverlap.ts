@@ -27,7 +27,6 @@ export const detectPlanOverlaps = (
     }
   });
   
-  // Check against all other plans
   allPlans.forEach(otherPlan => {
     if (otherPlan.id === plan.id) return; // Skip self
     

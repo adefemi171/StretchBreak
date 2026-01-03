@@ -28,7 +28,6 @@ export const RegionSelectorDropdown = ({
     return Array.from(regionSet).sort();
   }, [holidays]);
   
-  // If no regions available, show a disabled selector with a message
   if (availableRegions.length === 0) {
     return (
       <div className="region-selector-dropdown">

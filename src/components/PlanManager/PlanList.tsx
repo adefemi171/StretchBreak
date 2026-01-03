@@ -62,7 +62,6 @@ export const PlanList = ({
     setShowForm(true);
   };
   
-  // Calculate overlap statistics
   const overlapStats = useMemo(() => {
     if (plans.length === 0) return null;
     

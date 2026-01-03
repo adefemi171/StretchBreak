@@ -10,54 +10,8 @@ const getNetlifyFunctionUrl = (functionName: string): string => {
   return `/.netlify/functions/${functionName}`;
 };
 
-// Check if AI is available (Netlify Functions are always available)
 export const isAIAvailable = (): boolean => {
   return true; // Netlify Functions handle API key availability server-side
-};
-
-export interface NaturalLanguageRequest {
-  text: string;
-  holidays: PublicHoliday[];
-  year: number;
-  preferences?: UserPreferences;
-}
-
-export interface ParsedRequest {
-  startDate?: string;
-  endDate?: string;
-  duration?: number;
-  month?: number;
-  season?: string;
-  constraints?: string[];
-}
-
-export const parseNaturalLanguage = async (
-  request: NaturalLanguageRequest
-): Promise<ParsedRequest> => {
-  try {
-    const response = await fetch(getNetlifyFunctionUrl('parse-natural-language'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: request.text,
-        holidays: request.holidays,
-        year: request.year,
-        preferences: request.preferences,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.parsed as ParsedRequest;
-  } catch (error) {
-    throw error;
-  }
 };
 
 export const generateAISuggestions = async (
@@ -122,7 +76,7 @@ export const chatWithAssistant = async (
     }
 
     const data = await response.json();
-    return data.reply || 'I apologize, I could not generate a response.';
+    return data.response || 'I apologize, I could not generate a response.';
   } catch (error) {
     throw error;
   }

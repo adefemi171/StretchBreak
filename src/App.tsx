@@ -42,7 +42,6 @@ function App() {
     if (savedTotal > 0) {
       return getRemainingPTODays();
     }
-    // Check if any saved plan has PTO info
     const savedPlans = getAllPlans();
     const planWithPTO = savedPlans.find(p => p.availablePTODays && p.availablePTODays > 0);
     if (planWithPTO && planWithPTO.availablePTODays) {
@@ -109,7 +108,6 @@ function App() {
   }, [plans]);
 
   useEffect(() => {
-    // Only generate AI suggestions if holidays are loaded and not loading
     if (holidays.length > 0 && !holidaysLoading && isAIAvailable) {
       generateSuggestions(holidays, year, preferences);
     }
@@ -142,7 +140,6 @@ function App() {
   }, [addPlan]);
   
   useEffect(() => {
-    // If detection succeeded, update country
     if (detectedCountry && shouldApplyAutoDetect) {
       setCountryCode(detectedCountry);
       setShouldApplyAutoDetect(false);
@@ -291,7 +288,6 @@ function App() {
         const dayOfWeek = day.getDay();
         const isAlreadyUsed = usedDates.has(dateStr);
         
-        // Only include weekdays that aren't holidays, weekends, or already used in other plans
         if (!isPublicHoliday && !isCompanyHoliday && dayOfWeek !== 0 && dayOfWeek !== 6 && !isAlreadyUsed) {
           dates.push(dateStr);
         }

@@ -16,7 +16,6 @@ export const PTOInput = ({ value, onChange, showRemaining = true }: PTOInputProp
   const inputRef = useRef<HTMLInputElement>(null);
   const isTypingRef = useRef<boolean>(false);
   
-  // Only sync from props when input is not focused (user finished typing)
   useEffect(() => {
     const isFocused = document.activeElement === inputRef.current;
     if (!isFocused && !isTypingRef.current) {
@@ -28,19 +27,15 @@ export const PTOInput = ({ value, onChange, showRemaining = true }: PTOInputProp
     const newValue = e.target.value;
     isTypingRef.current = true;
     
-    // Allow empty input while typing
     if (newValue === '') {
       setInputValue('');
       return;
     }
     
-    // Only allow digits
     if (!/^\d+$/.test(newValue)) {
       return;
     }
     
-    // Update local state immediately for responsive typing
-    // Don't call onChange here - wait for blur
     setInputValue(newValue);
   };
   

@@ -49,7 +49,6 @@ function findVacationPeriods(
     const holidayDate = holiday.dateObj;
     const dayOfWeek = getDay(holidayDate);
     
-    // Check for consecutive holidays (e.g., Dec 25-26)
     const nextHoliday = i < sortedHolidays.length - 1 ? sortedHolidays[i + 1] : null;
     const daysBetween = nextHoliday 
       ? Math.round((nextHoliday.dateObj.getTime() - holidayDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -59,15 +58,13 @@ function findVacationPeriods(
     // Strategy-specific logic
     switch (strategy) {
       case 'long-weekends':
-        // Focus on 3-4 day weekends
-        if (dayOfWeek === 4 || dayOfWeek === 5) { // Thu or Fri
+        if (dayOfWeek === 4 || dayOfWeek === 5) {
           const suggestion = createLongWeekendSuggestion(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
           if (suggestion) suggestions.push(suggestion);
         }
         break;
         
       case 'mini-breaks':
-        // 5-6 day breaks
         if (dayOfWeek >= 1 && dayOfWeek <= 5) {
           const suggestion = createMiniBreakSuggestion(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
           if (suggestion) suggestions.push(suggestion);
@@ -75,20 +72,17 @@ function findVacationPeriods(
         break;
         
       case 'week-long':
-        // 7-9 day breaks
         const weekLong = createWeekLongSuggestion(holiday, sortedHolidays, i);
         if (weekLong) suggestions.push(...weekLong);
         break;
         
       case 'extended':
-        // 10-15 day vacations
         const extended = createExtendedSuggestion(holiday, sortedHolidays, i);
         if (extended) suggestions.push(...extended);
         break;
         
       case 'balanced':
       default:
-        // Mix of all types
         const balanced = createBalancedSuggestions(holiday, sortedHolidays, i, isConsecutiveHoliday ? nextHoliday : null);
         suggestions.push(...balanced);
         break;
@@ -155,7 +149,6 @@ function createMiniBreakSuggestion(
   const holidayDate = holiday.dateObj;
   const dayOfWeek = getDay(holidayDate);
   
-  // Create 5-6 day breaks
   if (dayOfWeek >= 1 && dayOfWeek <= 3) {
     const start = subDays(holidayDate, dayOfWeek === 1 ? 0 : dayOfWeek - 1);
     const end = nextHoliday ? nextHoliday.dateObj : addDays(holidayDate, 5 - dayOfWeek);
@@ -189,7 +182,6 @@ function createWeekLongSuggestion(
   const suggestions: PlanSuggestion[] = [];
   const holidayDate = holiday.dateObj;
   
-  // Create 7-9 day breaks
   const start = subDays(holidayDate, 5);
   const end = addDays(holidayDate, 3);
   const vacationDays = getWeekdaysBetween(start, end).filter(d => {
@@ -220,7 +212,6 @@ function createExtendedSuggestion(
   const suggestions: PlanSuggestion[] = [];
   const holidayDate = holiday.dateObj;
   
-  // Create 10-15 day vacations
   const start = subDays(holidayDate, 7);
   const end = addDays(holidayDate, 7);
   const vacationDays = getWeekdaysBetween(start, end).filter(d => {
@@ -251,7 +242,6 @@ function createBalancedSuggestions(
 ): PlanSuggestion[] {
   const suggestions: PlanSuggestion[] = [];
   
-  // Mix of different types
   const longWeekend = createLongWeekendSuggestion(holiday, allHolidays, index, nextHoliday);
   if (longWeekend) suggestions.push(longWeekend);
   
@@ -280,8 +270,6 @@ function optimizePTODistribution(
   _availablePTODays: number,
   _strategy: VacationStrategy
 ): PlanSuggestion[] {
-  // Deduplicate suggestions with the same start and end dates
-  // Keep the one with the best efficiency (or first one if efficiency is the same)
   const uniqueSuggestions = new Map<string, PlanSuggestion>();
   
   for (const suggestion of periods) {
@@ -291,12 +279,9 @@ function optimizePTODistribution(
     if (!existing) {
       uniqueSuggestions.set(key, suggestion);
     } else {
-      // If we have a duplicate, keep the one with better efficiency
-      // or if efficiency is the same, keep the one with more descriptive reason
       if (suggestion.efficiency > existing.efficiency) {
         uniqueSuggestions.set(key, suggestion);
       } else if (suggestion.efficiency === existing.efficiency) {
-        // If efficiency is the same, prefer the one with longer reason (more descriptive)
         if (suggestion.reason.length > existing.reason.length) {
           uniqueSuggestions.set(key, suggestion);
         }
@@ -304,15 +289,12 @@ function optimizePTODistribution(
     }
   }
   
-  // Sort by start date (chronologically) to show suggestions throughout the year
   const sorted = Array.from(uniqueSuggestions.values()).sort((a, b) => {
     const dateA = parseISO(a.startDate);
     const dateB = parseISO(b.startDate);
     return dateA.getTime() - dateB.getTime();
   });
   
-  // Return all suggestions sorted chronologically, not filtered by PTO budget
-  // Users can see all opportunities and choose which ones to apply
-  return sorted.slice(0, 20); // Return top 20 suggestions
+  return sorted.slice(0, 20);
 }
 

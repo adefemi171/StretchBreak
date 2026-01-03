@@ -15,13 +15,10 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     return null;
   }
 
-  // Get date range from first to last vacation day
   const sortedDates = [...plan.vacationDays].sort();
   let startDate = parseISO(sortedDates[0]);
   let endDate = parseISO(sortedDates[sortedDates.length - 1]);
   
-  // Extend range to include adjacent holidays and weekends that create continuous break
-  // Check for holidays/weekends immediately before the first vacation day
   let checkDate = subDays(startDate, 1);
   while (true) {
     const dateStr = format(checkDate, 'yyyy-MM-dd');
@@ -36,7 +33,6 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     }
   }
   
-  // Check for holidays/weekends immediately after the last vacation day
   checkDate = addDays(endDate, 1);
   while (true) {
     const dateStr = format(checkDate, 'yyyy-MM-dd');
@@ -51,10 +47,8 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     }
   }
   
-  // Get all days in the extended range
   const allDays = eachDayOfInterval({ start: startDate, end: endDate });
 
-  // Separate vacation days (weekdays) from holidays and weekends
   const vacationDaysList: string[] = [];
   const holidaysInPeriod: PublicHoliday[] = [];
   const weekendsInPeriod: string[] = [];
@@ -65,17 +59,14 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     const isWeekend = isWeekendDay(day);
     const isVacationDay = plan.vacationDays.includes(dateStr);
 
-    // Public holidays in the period
     if (isHoliday) {
       holidaysInPeriod.push(isHoliday);
     }
     
-    // Weekends in the period (not already counted as vacation days)
     if (isWeekend && !isVacationDay) {
       weekendsInPeriod.push(dateStr);
     }
     
-    // Vacation days (weekdays that need to be taken off)
     if (isVacationDay && !isWeekend && !isHoliday) {
       vacationDaysList.push(dateStr);
     }
@@ -83,7 +74,6 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
 
   const totalDaysOff = vacationDaysList.length + holidaysInPeriod.length + weekendsInPeriod.length;
   
-  // Check for overlaps with other plans
   const allPlans = getAllPlans();
   const overlapInfo = detectPlanOverlaps(plan, allPlans);
   const hasOverlaps = overlapInfo.overlapCount > 0;

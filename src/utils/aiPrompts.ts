@@ -26,21 +26,3 @@ ${preferencesText}
 Suggest vacation periods that maximize days off while minimizing vacation days used.`;
 };
 
-export const buildNaturalLanguagePrompt = (
-  text: string,
-  holidays: PublicHoliday[],
-  year: number
-): string => {
-  const holidaysList = holidays
-    .map(h => `${h.date}: ${h.localName}`)
-    .join('\n');
-  
-  return `Parse this holiday planning request: "${text}"
-
-Year: ${year}
-Available holidays:
-${holidaysList}
-
-Extract dates, duration, and preferences.`;
-};
-

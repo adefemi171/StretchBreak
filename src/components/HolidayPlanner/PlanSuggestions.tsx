@@ -28,7 +28,6 @@ export const PlanSuggestions = ({
     if (!uniqueSuggestions.has(key)) {
       uniqueSuggestions.set(key, suggestion);
     } else {
-      // If duplicate exists, keep the one with better efficiency or longer reason
       const existing = uniqueSuggestions.get(key)!;
       if (suggestion.efficiency > existing.efficiency) {
         uniqueSuggestions.set(key, suggestion);

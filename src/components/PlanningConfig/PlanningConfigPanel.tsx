@@ -19,7 +19,6 @@ export const PlanningConfigPanel = ({
   onOptimize,
 }: PlanningConfigPanelProps) => {
   const handlePTODaysChange = (days: number) => {
-    // Always replace Total PTO when updated (not add)
     if (days > 0) {
       setTotalPTODays(days);
       // Recalculate remaining days

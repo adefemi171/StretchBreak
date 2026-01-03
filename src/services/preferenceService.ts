@@ -10,10 +10,8 @@ export const getUserPreferences = (): UserPreferences => {
       return JSON.parse(stored);
     }
   } catch (error) {
-    // Return default preferences on error
   }
   
-  // Return default preferences
   return {
     preferredMonths: [],
     typicalDuration: 5,
@@ -34,13 +32,11 @@ export const updatePreferencesFromPlan = (_plan: HolidayPlan): void => {
     });
   });
   
-  // Calculate typical duration
   const durations = plans.map(p => p.vacationDays.length);
   const avgDuration = durations.length > 0
     ? durations.reduce((a, b) => a + b, 0) / durations.length
     : 5;
   
-  // Calculate average efficiency
   const efficiencies = plans.map(p => {
     const totalDays = p.vacationDays.length + p.publicHolidays.length;
     return totalDays / p.vacationDays.length;
