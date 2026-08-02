@@ -1,188 +1,181 @@
 .plan-breakdown {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.25rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .plan-breakdown h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.25rem;
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
 }
 
 .breakdown-overlap-warning {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: #fff3cd;
-  border: 2px solid #ffc107;
-  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  padding: 0.95rem;
+  background: var(--warn-soft);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: var(--radius-md);
 }
 
 .breakdown-overlap-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-weight: 600;
-  color: #856404;
-  font-size: 14px;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+  font-weight: 700;
+  color: var(--warn);
+  font-size: 0.9rem;
 }
 
 .breakdown-overlap-icon {
-  font-size: 18px;
-}
-
-.breakdown-overlap-text {
-  flex: 1;
+  display: none;
 }
 
 .breakdown-overlapping-plans {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-size: 13px;
-  color: #856404;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: #7a5a0a;
 }
 
 .breakdown-overlap-label {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .breakdown-overlap-plan-names {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
+  gap: 0.4rem;
 }
 
 .breakdown-overlap-plan-name {
   display: inline-block;
-  padding: 4px 8px;
-  background-color: white;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  background: white;
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 .breakdown-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
   padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 6px;
+  background: rgba(20, 36, 40, 0.025);
+  border-radius: var(--radius-md);
 }
 
 .summary-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .summary-item.total {
   grid-column: 1 / -1;
-  padding-top: 1rem;
-  border-top: 2px solid #ddd;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
 }
 
 .summary-label {
-  font-size: 0.875rem;
-  color: #666;
-  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .summary-value {
-  font-size: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
   font-weight: 700;
-  color: #333;
+  color: var(--ink);
+  letter-spacing: -0.02em;
 }
 
 .summary-value.highlight {
-  color: #28a745;
+  color: var(--company);
 }
 
 .summary-value.holiday {
-  color: #dc3545;
+  color: var(--holiday);
 }
 
 .summary-value.weekend {
-  color: #6c757d;
+  color: var(--muted);
 }
 
 .summary-item.total .summary-value {
-  font-size: 1.75rem;
-  color: #007bff;
+  font-size: 1.7rem;
+  color: var(--accent);
 }
 
 .breakdown-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.1rem;
 }
 
 .breakdown-section {
-  background-color: #f8f9fa;
+  background: rgba(20, 36, 40, 0.025);
   padding: 1rem;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
 .breakdown-section h4 {
-  margin: 0 0 0.75rem 0;
-  color: #333;
+  margin: 0 0 0.7rem;
+  color: var(--ink);
   font-size: 1rem;
 }
 
 .dates-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-height: 300px;
+  gap: 0.4rem;
+  max-height: 280px;
   overflow-y: auto;
 }
 
 .date-item {
-  padding: 0.5rem;
-  background-color: #fff;
-  border-radius: 4px;
-  border-left: 3px solid #ddd;
-  font-size: 0.875rem;
+  padding: 0.5rem 0.65rem;
+  background: white;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--border-strong);
+  font-size: 0.85rem;
 }
 
 .date-item.vacation {
-  border-left-color: #28a745;
-  background-color: #f0f9f4;
+  border-left-color: var(--company);
+  background: var(--company-soft);
 }
 
 .date-item.holiday {
-  border-left-color: #dc3545;
-  background-color: #fff5f5;
-}
-
-.date-item.holiday {
+  border-left-color: var(--holiday);
+  background: var(--holiday-soft);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .holiday-date {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .holiday-name {
-  color: #666;
-  font-size: 0.8125rem;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .no-dates {
-  color: #999;
+  color: var(--muted-soft);
   font-style: italic;
   text-align: center;
   padding: 1rem;
@@ -198,4 +191,3 @@
     grid-template-columns: 1fr;
   }
 }
-

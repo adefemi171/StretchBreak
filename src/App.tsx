@@ -18,11 +18,14 @@ import { createPlanId, getAllPlans, clearAllPlans, getUsedStrategies } from './s
 import { getSharedPlanFromUrl } from './services/shareService';
 import { setTotalPTODays, getTotalPTODays, getRemainingPTODays, hasSavedPlansWithPTO, resetAllPTOData, getAvailablePTODaysInput } from './services/ptoTracking';
 import { SettingsTab } from './components/Settings/SettingsTab';
+import { BridgeBoard } from './components/BridgeBoard/BridgeBoard';
+import { NaturalLanguageInput } from './components/NaturalLanguage/NaturalLanguageInput';
+import { StretchShare } from './components/Share/StretchShare';
 import { optimizeByStrategy } from './utils/strategyOptimizer';
 import { filterHolidaysByRegions } from './utils/holidayFilter';
 import { parseDateString, formatDate } from './utils/dateUtils';
 import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay, eachDayOfInterval } from 'date-fns';
-import type { HolidayPlan, PlanningConfig, VacationStrategy } from './utils/types';
+import type { HolidayPlan, PlanningConfig, PlanSuggestion, VacationStrategy } from './utils/types';
 import './App.css';
 
 function App() {
@@ -71,6 +74,9 @@ function App() {
       ? new Date(planningConfig.timeframe.startDate).getFullYear()
       : new Date().getFullYear();
   const [optimizedSuggestions, setOptimizedSuggestions] = useState<any[]>([]);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [planName, setPlanName] = useState('');
+  const [planDescription, setPlanDescription] = useState('');
   const [showConfig, setShowConfig] = useState(() => {
     // Don't show config if there are saved plans with PTO
     return !hasSavedPlansWithPTO();
@@ -88,7 +94,7 @@ function App() {
     : allHolidays;
   
   const { addPlan, plans, loadPlans } = usePlans();
-  const { aiSuggestions, loading: aiLoading, error: aiError, generateSuggestions, isAIAvailable } = useAI();
+  const { aiSuggestions, loading: aiLoading, error: aiError, generateSuggestions, isAIAvailable, aiChecked } = useAI();
   const { preferences, updateFromPlan } = usePreferences();
   const { detectedCountry, isDetecting, detectLocation } = useLocation();
   
@@ -108,10 +114,10 @@ function App() {
   }, [plans]);
 
   useEffect(() => {
-    if (holidays.length > 0 && !holidaysLoading && isAIAvailable) {
+    if (holidays.length > 0 && !holidaysLoading && aiChecked && isAIAvailable) {
       generateSuggestions(holidays, year, preferences);
     }
-  }, [holidays.length, holidaysLoading, year, isAIAvailable]);
+  }, [holidays.length, holidaysLoading, year, isAIAvailable, aiChecked, generateSuggestions]);
   
   useEffect(() => {
     localStorage.setItem('lastCountryCode', countryCode);
@@ -149,6 +155,29 @@ function App() {
   const handleCountryChange = (newCountryCode: string) => {
     setCountryCode(newCountryCode);
     setShouldApplyAutoDetect(false);
+  };
+
+  const applySuggestionToPlan = (suggestion: PlanSuggestion) => {
+    const start = parseDateString(suggestion.startDate);
+    const end = parseDateString(suggestion.endDate);
+    const dates: string[] = [];
+
+    for (const day of eachDayOfInterval({ start, end })) {
+      const dateStr = formatDate(day);
+      const isPublicHoliday = holidays.some(h => h.date === dateStr);
+      const isCompanyHoliday = planningConfig.companyHolidays.some(h => h.date === dateStr);
+      const dayOfWeek = day.getDay();
+      if (!isPublicHoliday && !isCompanyHoliday && dayOfWeek !== 0 && dayOfWeek !== 6) {
+        dates.push(dateStr);
+      }
+    }
+
+    setSelectedDates([...new Set(dates)].sort());
+    setShowConfig(false);
+    setActiveTab('planner');
+    window.setTimeout(() => {
+      plannerViewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
   
   useEffect(() => {
@@ -504,45 +533,52 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <div className="header-text">
-            <h1>StretchBreak</h1>
-            <p className="subtitle">Maximize your vacation time with smart planning</p>
+          <div className="brand-mark" aria-hidden="true">
+            <span className="brand-dot" />
+            <span className="brand-label">Vacation planner</span>
           </div>
+          <h1>StretchBreak</h1>
+          <p className="subtitle">
+            Turn public holidays into longer escapes — plan PTO around the calendar that actually works.
+          </p>
         </div>
       </header>
-      
-      <div className="app-controls">
-        <div className="location-control">
-          <CountrySelector value={countryCode} onChange={handleCountryChange} />
-          <button
-            onClick={async () => {
-              setShouldApplyAutoDetect(true);
-              await detectLocation();
-            }}
-            disabled={isDetecting}
-            className="refresh-location-button"
-            title="Refresh and use auto-detected country"
-          >
-            {isDetecting ? '⏳' : '🔄'}
-          </button>
-          {detectedCountry && countryCode === detectedCountry && (
-            <span className="location-success" title="Country auto-detected">
-              ✓
-            </span>
-          )}
-        </div>
-        <div className="year-region-controls">
-          {!holidaysLoading && allHolidays.length > 0 && (
-            <RegionSelectorDropdown
-              holidays={allHolidays}
-              selectedRegions={planningConfig.selectedRegions || []}
-              onChange={(regions) => setPlanningConfig({ ...planningConfig, selectedRegions: regions })}
-            />
-          )}
+
+      <div className="app-toolbar">
+        <div className="app-controls">
+          <div className="location-control">
+            <CountrySelector value={countryCode} onChange={handleCountryChange} />
+            <button
+              onClick={async () => {
+                setShouldApplyAutoDetect(true);
+                await detectLocation();
+              }}
+              disabled={isDetecting}
+              className="refresh-location-button"
+              title="Refresh and use auto-detected country"
+              aria-label="Detect country from location"
+            >
+              {isDetecting ? '…' : '↻'}
+            </button>
+            {detectedCountry && countryCode === detectedCountry && (
+              <span className="location-success" title="Country auto-detected">
+                Detected
+              </span>
+            )}
+          </div>
+          <div className="year-region-controls">
+            {!holidaysLoading && allHolidays.length > 0 && (
+              <RegionSelectorDropdown
+                holidays={allHolidays}
+                selectedRegions={planningConfig.selectedRegions || []}
+                onChange={(regions) => setPlanningConfig({ ...planningConfig, selectedRegions: regions })}
+              />
+            )}
+          </div>
         </div>
       </div>
-      
-      <div className="app-tabs">
+
+      <nav className="app-tabs" aria-label="Main">
         <button
           className={`tab ${activeTab === 'planner' ? 'active' : ''}`}
           onClick={() => setActiveTab('planner')}
@@ -567,9 +603,9 @@ function App() {
           className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          ⚙️ Settings
+          Settings
         </button>
-      </div>
+      </nav>
       
       <main className="app-main">
         {activeTab === 'planner' && (
@@ -582,6 +618,19 @@ function App() {
                   countryCode={countryCode}
                   onConfigChange={setPlanningConfig}
                   onOptimize={handleOptimize}
+                />
+
+                <BridgeBoard
+                  holidays={holidays.filter(holiday => {
+                    const today = startOfDay(new Date());
+                    const holidayDate = startOfDay(parseISO(holiday.date));
+                    return holidayDate.getFullYear() === year &&
+                      (!isPast(holidayDate) || isSameDay(holidayDate, today));
+                  })}
+                  year={year}
+                  countryCode={countryCode}
+                  loading={holidaysLoading}
+                  onUseBridge={applySuggestionToPlan}
                 />
                 
                 {holidaysLoading && (
@@ -608,15 +657,33 @@ function App() {
                 
                 {aiLoading && (
                   <div className="loading-message">
-                    🤖 AI is analyzing holidays and generating suggestions...
+                    AI is analyzing holidays and generating suggestions…
                   </div>
                 )}
                 
                 {aiError && (
                   <div className="error-message">
-                    ⚠️ AI Error: {aiError}
+                    AI error: {aiError}
                   </div>
                 )}
+
+                {aiChecked && !isAIAvailable && !aiError && (
+                  <div className="info-message">
+                    AI extras are offline — Bridge Board and natural-language planning still work.
+                    For chat/AI suggestions, run <code>npm run dev:full</code> with an OpenAI key.
+                  </div>
+                )}
+
+                <NaturalLanguageInput
+                  holidays={holidays.filter(holiday => {
+                    const today = startOfDay(new Date());
+                    const holidayDate = startOfDay(parseISO(holiday.date));
+                    return holidayDate.getFullYear() === year &&
+                      (!isPast(holidayDate) || isSameDay(holidayDate, today));
+                  })}
+                  year={year}
+                  onApplySuggestion={applySuggestionToPlan}
+                />
                 
                 <HolidayPlanner
                   holidays={holidays.filter(holiday => {
@@ -681,6 +748,13 @@ function App() {
                   holidays={holidays}
                   availablePTODays={planningConfig.availablePTODays}
                 />
+
+                <StretchShare
+                  vacationDays={selectedDates}
+                  holidays={holidays}
+                  countryCode={countryCode}
+                  year={year}
+                />
                 
                 {selectedDates.length > 0 && (
                   <ExportPanel
@@ -699,20 +773,73 @@ function App() {
                 )}
                 
                 <div className="save-plan-section">
-                  <h3>Save Your Plan</h3>
-                  <button
-                    onClick={() => {
-                      const name = prompt('Enter plan name:');
-                      if (name) {
-                        const description = prompt('Enter description (optional):');
-                        handleSavePlan(name, description || undefined);
-                      }
-                    }}
-                    className="save-button"
-                    disabled={selectedDates.length === 0}
-                  >
-                    Save Plan
-                  </button>
+                  <h3>Save your plan</h3>
+                  <p className="save-plan-hint">
+                    {selectedDates.length === 0
+                      ? 'Select vacation days on the calendar first.'
+                      : `${selectedDates.length} day${selectedDates.length === 1 ? '' : 's'} selected — name it and keep it.`}
+                  </p>
+                  {!showSaveForm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowSaveForm(true)}
+                      className="save-button"
+                      disabled={selectedDates.length === 0}
+                    >
+                      Save plan
+                    </button>
+                  ) : (
+                    <form
+                      className="save-plan-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const name = planName.trim();
+                        if (!name) return;
+                        handleSavePlan(name, planDescription.trim() || undefined);
+                        setPlanName('');
+                        setPlanDescription('');
+                        setShowSaveForm(false);
+                        setActiveTab('plans');
+                      }}
+                    >
+                      <label>
+                        Plan name
+                        <input
+                          type="text"
+                          value={planName}
+                          onChange={(e) => setPlanName(e.target.value)}
+                          placeholder="Summer long weekend"
+                          autoFocus
+                          required
+                        />
+                      </label>
+                      <label>
+                        Description (optional)
+                        <textarea
+                          value={planDescription}
+                          onChange={(e) => setPlanDescription(e.target.value)}
+                          placeholder="Notes for later…"
+                          rows={2}
+                        />
+                      </label>
+                      <div className="save-plan-actions">
+                        <button type="submit" className="save-button" disabled={!planName.trim()}>
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            setShowSaveForm(false);
+                            setPlanName('');
+                            setPlanDescription('');
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               </>
             )}

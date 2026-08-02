@@ -1,30 +1,32 @@
 .country-selector {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .country-selector label {
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
 }
 
 .country-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
   min-width: 200px;
+  background: white;
+  color: var(--ink);
 }
 
 .country-select:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .country-select:disabled {
-  background-color: #f5f5f5;
+  background-color: rgba(20, 36, 40, 0.04);
   cursor: not-allowed;
 }
-

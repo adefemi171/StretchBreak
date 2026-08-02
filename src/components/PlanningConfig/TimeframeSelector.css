@@ -1,53 +1,56 @@
 .timeframe-selector {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .timeframe-label {
   display: block;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
 }
 
 .timeframe-subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
 }
 
 .timeframe-options {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .timeframe-option {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   background-color: white;
 }
 
 .timeframe-option:hover {
-  border-color: #007bff;
-  background-color: #f8f9ff;
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+  transform: translateY(-1px);
 }
 
 .timeframe-option.selected {
-  border-color: #007bff;
-  background-color: #e7f3ff;
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
 }
 
 .timeframe-option input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   margin-top: 2px;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -56,25 +59,34 @@
 }
 
 .timeframe-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.2rem;
 }
 
 .timeframe-description {
-  font-size: 13px;
-  color: #666;
+  font-size: 0.85rem;
+  color: var(--muted);
   margin-bottom: 0.75rem;
 }
 
-.year-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+.year-select,
+.date-input {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
   background-color: white;
+  color: var(--ink);
   cursor: pointer;
+}
+
+.year-select:focus,
+.date-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .custom-dates {
@@ -90,21 +102,7 @@
 }
 
 .date-input-group label {
-  font-size: 12px;
-  color: #666;
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
 }
-
-.date-input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.date-input:focus {
-  outline: none;
-  border-color: #007bff;
-}
-

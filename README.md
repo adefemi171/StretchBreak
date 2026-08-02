@@ -51,11 +51,19 @@ npm install
    **Note:** The API key is now stored server-side in Netlify Functions, so it won't be exposed in the browser.
 
 4. Start the development server:
+
+**Frontend only** (algorithmic planning, Bridge Board, natural language — no AI chat):
 ```bash
 npm run dev
 ```
 
-5. Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173`)
+**Full stack with AI** (Netlify Functions + OpenAI):
+```bash
+npm run dev:full
+```
+Requires `OPENAI_API_KEY` set in your Netlify env or `.env`.
+
+5. Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173`, or the Netlify Dev URL when using `dev:full`)
 
 ## Usage
 

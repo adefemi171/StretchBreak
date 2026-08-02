@@ -87,9 +87,9 @@ export const PlanningConfigPanel = ({
   
   return (
     <div className="planning-config-panel">
-      <h2>Plan Your Year</h2>
+      <h2>Set up your year</h2>
       <p className="config-subtitle">
-        Complete these steps to optimize your time off throughout the year
+        Tell us your PTO budget and timeframe — we’ll stretch it around public holidays.
       </p>
       
       <div className="config-steps">
@@ -138,10 +138,10 @@ export const PlanningConfigPanel = ({
           disabled={!canOptimize}
           className="optimize-button"
         >
-          Optimize My Time Off
+          Find my best breaks
         </button>
         {!canOptimize && (
-          <p className="optimize-hint">Please enter your available PTO days to continue</p>
+          <p className="optimize-hint">Enter your available PTO days to continue</p>
         )}
       </div>
     </div>

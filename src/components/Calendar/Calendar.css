@@ -1,12 +1,17 @@
 .calendar-container {
   width: 100%;
+  padding: 1.25rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .calendar-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   gap: 1rem;
   flex-wrap: wrap;
 }
@@ -18,144 +23,153 @@
 }
 
 .nav-button {
-  padding: 8px 12px;
-  background-color: #007bff;
+  padding: 0.55rem 0.9rem;
+  background: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
 
 .nav-button:hover {
-  background-color: #0056b3;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .month-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: white;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background: white;
+  color: var(--ink);
   cursor: pointer;
 }
 
 .month-select:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .today-button {
-  background-color: #6c757d;
+  background: var(--ink-soft);
 }
 
 .today-button:hover {
-  background-color: #5a6268;
+  background: var(--ink);
 }
 
 .view-toggle {
   display: flex;
-  gap: 0.25rem;
-  background-color: #f0f0f0;
-  padding: 2px;
-  border-radius: 4px;
+  gap: 0.2rem;
+  background: rgba(20, 36, 40, 0.05);
+  padding: 3px;
+  border-radius: 999px;
 }
 
 .view-button {
-  padding: 6px 12px;
+  padding: 0.45rem 0.85rem;
   border: none;
-  border-radius: 3px;
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   background: transparent;
-  color: #666;
-  transition: all 0.2s;
+  color: var(--muted);
+  transition: all 0.2s var(--ease-out);
 }
 
 .view-button:hover {
-  background-color: #e0e0e0;
+  color: var(--ink);
 }
 
 .view-button.active {
-  background-color: white;
-  color: #007bff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: white;
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .calendar-months {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-  .calendar-months {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .calendar-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .calendar-nav-group {
-    justify-content: center;
-  }
-  
-  .view-toggle {
-    width: 100%;
-    justify-content: center;
-  }
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .calendar-legend {
   display: flex;
-  gap: 2rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
-  padding: 1rem;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  padding: 0.85rem 1rem;
+  background: rgba(20, 36, 40, 0.03);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .legend-color {
-  width: 20px;
-  height: 20px;
-  border: 1px solid #ccc;
-  border-radius: 2px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
 }
 
 .legend-color.holiday {
-  background-color: #fff3cd;
-  border-color: #ffc107;
+  background: var(--holiday-soft);
+  border-color: var(--holiday);
 }
 
 .legend-color.suggested {
-  background-color: #d1ecf1;
-  border-color: #17a2b8;
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .legend-color.selected {
-  background-color: #cce5ff;
-  border-color: #007bff;
+  background: var(--sun-soft);
+  border-color: var(--sun);
 }
 
 .legend-color.company-holiday {
-  background-color: #d4edda;
-  border-color: #28a745;
+  background: var(--company-soft);
+  border-color: var(--company);
 }
 
 .legend-color.weekend {
-  background-color: #f0f0f0;
+  background: var(--weekend);
 }
 
+@media (max-width: 768px) {
+  .calendar-container {
+    padding: 1rem;
+  }
+
+  .calendar-months {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .calendar-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .calendar-nav-group {
+    justify-content: center;
+  }
+
+  .view-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+}

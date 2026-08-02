@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:full": "netlify dev",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

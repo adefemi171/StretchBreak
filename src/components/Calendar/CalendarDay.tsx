@@ -68,7 +68,7 @@ export const CalendarDay = ({
         </div>
       )}
       {isSelected && (
-        <div className="selected-indicator">✓</div>
+        <div className="selected-indicator" aria-hidden="true" />
       )}
     </div>
   );

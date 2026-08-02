@@ -1,114 +1,104 @@
 .settings-tab {
-  max-width: 800px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 24px;
 }
 
 .settings-tab-header {
-  margin-bottom: 32px;
+  margin-bottom: 1.75rem;
 }
 
 .settings-tab-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-  font-weight: 600;
-  color: #333;
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 700;
 }
 
 .settings-subtitle {
   margin: 0;
-  color: #666;
-  font-size: 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1.15rem;
 }
 
 .settings-section {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 24px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-section h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .settings-option-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 16px;
-  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+  background: rgba(20, 36, 40, 0.02);
 }
 
 .settings-option-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .settings-option-header {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 0.75rem;
   flex: 1;
 }
 
 .settings-option-icon {
-  font-size: 24px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .settings-option-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.25rem;
 }
 
 .settings-option-description {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .settings-action-button {
-  padding: 10px 20px;
+  padding: 0.65rem 1.1rem;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   white-space: nowrap;
 }
 
 .settings-action-button.reset-button {
-  background-color: #d32f2f;
+  background-color: var(--danger);
   color: white;
 }
 
 .settings-action-button.reset-button:hover {
-  background-color: #b71c1c;
-}
-
-.settings-action-button.reset-button:active {
-  background-color: #9a0000;
+  filter: brightness(0.95);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
-  .settings-tab {
-    padding: 16px;
-  }
-
   .settings-option-content {
     flex-direction: column;
     align-items: stretch;
@@ -118,4 +108,3 @@
     width: 100%;
   }
 }
-

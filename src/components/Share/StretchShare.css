@@ -1,0 +1,47 @@
+.stretch-share {
+  padding: 1.35rem 1.5rem;
+  background: linear-gradient(135deg, rgba(12, 124, 116, 0.08), rgba(227, 155, 46, 0.1));
+  border: 1px solid rgba(12, 124, 116, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+.stretch-share-copy h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.3rem;
+}
+
+.stretch-share-copy p {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stretch-share-preview {
+  margin: 0 0 0.9rem;
+  padding: 0.95rem 1rem;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.stretch-share-button {
+  padding: 0.65rem 1.15rem;
+  background: var(--ink);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+
+.stretch-share-button:hover {
+  background: var(--ink-soft);
+  transform: translateY(-1px);
+}

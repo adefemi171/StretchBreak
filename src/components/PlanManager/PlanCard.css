@@ -1,20 +1,26 @@
 .plan-card {
   padding: 1.25rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+
+.plan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(12, 124, 116, 0.25);
 }
 
 .plan-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.75rem;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .plan-title-section {
@@ -22,12 +28,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .plan-card-header h4 {
   margin: 0;
-  color: #333;
+  color: var(--ink);
   font-size: 1.1rem;
   word-break: break-word;
 }
@@ -36,174 +42,163 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  background: var(--warn-soft);
+  color: var(--warn);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .plan-card.has-overlaps {
-  border-color: #ffc107;
-  border-width: 2px;
-  background-color: #fffef9;
+  border-color: rgba(184, 134, 11, 0.45);
+  background: #fffdf6;
 }
 
 .plan-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .action-button {
-  padding: 6px 10px;
-  border: none;
-  border-radius: 4px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.2s var(--ease-out);
   white-space: nowrap;
-  flex-shrink: 0;
+  background: white;
+  color: var(--ink-soft);
 }
 
 .action-button.select {
-  background-color: #007bff;
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
 .action-button.select:hover {
-  background-color: #0056b3;
+  background: var(--accent-hover);
 }
 
-.action-button.edit {
-  background-color: #ffc107;
-  color: #333;
-}
-
-.action-button.edit:hover {
-  background-color: #e0a800;
-}
-
-.action-button.share {
-  background-color: #17a2b8;
-  color: white;
-}
-
+.action-button.edit:hover,
 .action-button.share:hover {
-  background-color: #138496;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .action-button.delete {
-  background-color: #dc3545;
-  color: white;
+  color: var(--danger);
+  border-color: rgba(194, 59, 59, 0.3);
 }
 
 .action-button.delete:hover {
-  background-color: #c82333;
+  background: var(--danger-soft);
 }
 
 .plan-description {
-  color: #666;
-  margin: 0 0 1rem 0;
-  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
 }
 
 .plan-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.65rem;
   margin-bottom: 1rem;
 }
 
 .detail {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .detail-label {
-  font-size: 12px;
-  color: #666;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .detail-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .plan-footer {
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
 }
 
 .plan-date {
-  font-size: 12px;
-  color: #999;
+  font-size: 0.75rem;
+  color: var(--muted-soft);
 }
 
 .overlap-warning {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  background-color: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 6px;
-  font-size: 13px;
+  margin: 0.85rem 0;
+  padding: 0.7rem;
+  background: var(--warn-soft);
+  border: 1px solid rgba(184, 134, 11, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
 }
 
 .overlap-warning-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #856404;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  color: var(--warn);
 }
 
 .overlap-icon {
-  font-size: 16px;
-}
-
-.overlap-text {
-  flex: 1;
+  display: none;
 }
 
 .overlapping-plans-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
 }
 
 .overlap-plan-name {
   display: inline-block;
-  padding: 4px 8px;
-  background-color: white;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #856404;
-  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  background: white;
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--warn);
+  font-weight: 600;
 }
 
 @media (max-width: 600px) {
   .plan-card-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
   }
-  
+
   .plan-actions {
     width: 100%;
-    flex-wrap: wrap;
   }
-  
+
   .action-button {
     flex: 1;
-    min-width: calc(50% - 0.2rem);
   }
 }
-

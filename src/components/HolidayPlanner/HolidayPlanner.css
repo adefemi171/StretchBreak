@@ -1,54 +1,62 @@
 .holiday-planner {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .pto-display-section {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 24px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .pto-display-description {
-  margin: 0 0 16px 0;
-  color: #666;
-  font-size: 14px;
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .pto-display-stats {
   display: flex;
-  gap: 24px;
+  gap: 1.75rem;
   flex-wrap: wrap;
 }
 
 .pto-stat {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 0.5rem;
 }
 
 .pto-stat-label {
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .pto-stat-value {
-  font-weight: 600;
-  font-size: 16px;
-  color: #667eea;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: var(--accent);
+  letter-spacing: -0.02em;
 }
 
 .pto-stat-value.pto-zero {
-  color: #d32f2f;
+  color: var(--danger);
 }
 
 .pto-stat-value.pto-low {
-  color: #f57c00;
+  color: var(--sun);
 }
 
 .strategy-selector-section {
-  margin-bottom: 24px;
+  padding: 1.35rem 1.5rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
-
