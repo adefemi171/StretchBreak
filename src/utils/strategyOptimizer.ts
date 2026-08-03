@@ -8,13 +8,18 @@ interface OptimizationParams {
   strategy: VacationStrategy;
   startDate: Date;
   endDate: Date;
+  carryover?: {
+    days: number;
+    expiryMonth: number;
+    year: number;
+  };
 }
 
 /**
  * Optimize vacation days based on strategy
  */
 export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[] => {
-  const { holidays, companyHolidays, availablePTODays, strategy, startDate, endDate } = params;
+  const { holidays, companyHolidays, availablePTODays, strategy, startDate, endDate, carryover } = params;
   
   const allHolidays = [
     ...holidays.map(h => ({ date: h.date, name: h.localName, isPublic: true })),
@@ -25,7 +30,7 @@ export const optimizeByStrategy = (params: OptimizationParams): PlanSuggestion[]
   });
   
   const periods = findVacationPeriods(allHolidays, strategy, startDate, endDate);
-  const optimized = optimizePTODistribution(periods, availablePTODays, strategy);
+  const optimized = optimizePTODistribution(periods, availablePTODays, strategy, carryover);
   
   return optimized;
 };
@@ -267,8 +272,13 @@ function getWeekdaysBetween(start: Date, end: Date): string[] {
 
 function optimizePTODistribution(
   periods: PlanSuggestion[],
-  _availablePTODays: number,
-  _strategy: VacationStrategy
+  availablePTODays: number,
+  _strategy: VacationStrategy,
+  carryover?: {
+    days: number;
+    expiryMonth: number;
+    year: number;
+  }
 ): PlanSuggestion[] {
   const uniqueSuggestions = new Map<string, PlanSuggestion>();
   
@@ -289,12 +299,57 @@ function optimizePTODistribution(
     }
   }
   
+  // Sort by efficiency (descending) then by start date
   const sorted = Array.from(uniqueSuggestions.values()).sort((a, b) => {
+    // First sort by efficiency (higher is better)
+    if (b.efficiency !== a.efficiency) {
+      return b.efficiency - a.efficiency;
+    }
+    // Then by start date (earlier is better)
     const dateA = parseISO(a.startDate);
     const dateB = parseISO(b.startDate);
     return dateA.getTime() - dateB.getTime();
   });
   
-  return sorted.slice(0, 20);
+  // Apply PTO budget constraint: greedily select suggestions until budget is exhausted
+  // If carryover is provided, compute available budget for each suggestion based on expiry
+  const budgetedSuggestions: PlanSuggestion[] = [];
+  let totalPTOUsed = 0;
+  
+  for (const suggestion of sorted) {
+    // Compute available budget for this suggestion
+    let budgetForSuggestion = availablePTODays;
+    
+    if (carryover && carryover.days > 0 && carryover.expiryMonth > 0) {
+      const suggestionStart = parseISO(suggestion.startDate);
+      // Last day of carryover expiry month
+      const lastDayOfExpiryMonth = new Date(carryover.year, carryover.expiryMonth, 0);
+      
+      // If suggestion starts after expiry, don't include carryover in budget
+      if (suggestionStart > lastDayOfExpiryMonth) {
+        // Budget is only annual remaining (carryover is already expired)
+        // availablePTODays already includes carryover if passed from parent, so we need to subtract it
+        budgetForSuggestion = availablePTODays - carryover.days;
+      }
+    }
+    
+    // Check if we can afford this suggestion
+    if (totalPTOUsed + suggestion.vacationDaysUsed <= budgetForSuggestion) {
+      budgetedSuggestions.push(suggestion);
+      totalPTOUsed += suggestion.vacationDaysUsed;
+    }
+    
+    // Stop if we've reached a reasonable number of suggestions
+    if (budgetedSuggestions.length >= 20) {
+      break;
+    }
+  }
+  
+  // Re-sort by start date for final display
+  return budgetedSuggestions.sort((a, b) => {
+    const dateA = parseISO(a.startDate);
+    const dateB = parseISO(b.startDate);
+    return dateA.getTime() - dateB.getTime();
+  });
 }
 

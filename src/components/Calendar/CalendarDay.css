@@ -6,7 +6,7 @@
   border-right: 1px solid var(--border);
   cursor: pointer;
   position: relative;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   transition: background 0.18s var(--ease-out), transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
   display: flex;
   flex-direction: column;
@@ -60,7 +60,7 @@
 
 .holiday-name {
   font-size: 0.65rem;
-  color: #9a4a3c;
+  color: var(--holiday);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -71,7 +71,7 @@
 
 .company-holiday-name {
   font-size: 0.65rem;
-  color: #1f6a46;
+  color: var(--company);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -38,7 +38,7 @@ export const SettingsMenu = ({ onResetAll }: SettingsMenuProps) => {
         title="Settings"
         aria-label="Settings"
       >
-        ⚙️
+        Settings
       </button>
       
       {isOpen && (
@@ -51,7 +51,6 @@ export const SettingsMenu = ({ onResetAll }: SettingsMenuProps) => {
               onClick={handleResetClick}
               className="settings-option reset-option"
             >
-              <span className="option-icon">🔄</span>
               <div className="option-content">
                 <div className="option-title">Reset All Data</div>
                 <div className="option-description">

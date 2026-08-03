@@ -1,5 +1,8 @@
-import type { PlanSuggestion } from '../../utils/types';
+import { useState, useMemo } from 'react';
+import type { PlanSuggestion, SuggestionFilters } from '../../utils/types';
 import { formatDateDisplay, parseDateString } from '../../utils/dateUtils';
+import { applySuggestionFilters, getEmptyFilters } from '../../utils/suggestionFilters';
+import { SuggestionFilters as SuggestionFiltersUI } from '../SuggestionFilters/SuggestionFilters';
 import './PlanSuggestions.css';
 
 interface PlanSuggestionsProps {
@@ -13,6 +16,31 @@ export const PlanSuggestions = ({
   onApplySuggestion,
   appliedFeedback,
 }: PlanSuggestionsProps) => {
+  const [filters, setFilters] = useState<SuggestionFilters>(getEmptyFilters());
+
+  const sortedSuggestions = useMemo(() => {
+    if (suggestions.length === 0) return [];
+
+    // Deduplicate suggestions with the same start and end dates
+    const uniqueSuggestions = new Map<string, PlanSuggestion>();
+    for (const suggestion of suggestions) {
+      const key = `${suggestion.startDate}-${suggestion.endDate}`;
+      if (!uniqueSuggestions.has(key)) {
+        uniqueSuggestions.set(key, suggestion);
+      } else {
+        const existing = uniqueSuggestions.get(key)!;
+        if (suggestion.efficiency > existing.efficiency) {
+          uniqueSuggestions.set(key, suggestion);
+        } else if (suggestion.efficiency === existing.efficiency && suggestion.reason.length > existing.reason.length) {
+          uniqueSuggestions.set(key, suggestion);
+        }
+      }
+    }
+
+    const deduplicated = Array.from(uniqueSuggestions.values());
+    return applySuggestionFilters(deduplicated, filters);
+  }, [suggestions, filters]);
+
   if (suggestions.length === 0) {
     return (
       <div className="plan-suggestions empty">
@@ -21,33 +49,16 @@ export const PlanSuggestions = ({
     );
   }
   
-  // Deduplicate suggestions with the same start and end dates
-  const uniqueSuggestions = new Map<string, PlanSuggestion>();
-  for (const suggestion of suggestions) {
-    const key = `${suggestion.startDate}-${suggestion.endDate}`;
-    if (!uniqueSuggestions.has(key)) {
-      uniqueSuggestions.set(key, suggestion);
-    } else {
-      const existing = uniqueSuggestions.get(key)!;
-      if (suggestion.efficiency > existing.efficiency) {
-        uniqueSuggestions.set(key, suggestion);
-      } else if (suggestion.efficiency === existing.efficiency && suggestion.reason.length > existing.reason.length) {
-        uniqueSuggestions.set(key, suggestion);
-      }
-    }
-  }
-  
-  // Sort suggestions chronologically by start date
-  const sortedSuggestions = Array.from(uniqueSuggestions.values()).sort((a, b) => {
-    const dateA = parseDateString(a.startDate);
-    const dateB = parseDateString(b.startDate);
-    return dateA.getTime() - dateB.getTime();
-  });
-  
   return (
     <div className="plan-suggestions">
       <h3>Optimal Vacation Suggestions</h3>
-      <div className="suggestions-list">
+      
+      <SuggestionFiltersUI filters={filters} onChange={setFilters} />
+
+      {sortedSuggestions.length === 0 ? (
+        <p className="no-results">No suggestions match the current filters.</p>
+      ) : (
+        <div className="suggestions-list">
         {sortedSuggestions.map((suggestion, index) => (
           <div key={index} className="suggestion-card">
             <div className="suggestion-header">
@@ -80,7 +91,8 @@ export const PlanSuggestions = ({
             </button>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

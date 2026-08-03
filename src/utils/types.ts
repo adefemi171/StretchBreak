@@ -10,14 +10,6 @@ export interface PublicHoliday {
   types: string[];
 }
 
-export interface VacationDay {
-  date: string;
-  isPublicHoliday: boolean;
-  isWeekend: boolean;
-  isSelected: boolean;
-  isSuggested: boolean;
-}
-
 export interface HolidayPlan {
   id: string;
   name: string;
@@ -72,6 +64,11 @@ export interface CompanyHoliday {
   countryCode?: string;
 }
 
+export interface PTOCarryover {
+  days: number;
+  expiryMonth: number; // 1-12, expires at end of that month in the planning year
+}
+
 export interface PlanningConfig {
   availablePTODays: number;
   strategy?: VacationStrategy;
@@ -83,6 +80,77 @@ export interface PlanningConfig {
   };
   companyHolidays: CompanyHoliday[];
   selectedRegions?: string[];
+  carryover?: PTOCarryover;
 }
 
+export interface VacationTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  strategy?: VacationStrategy;
+  preferredMonths?: number[];
+  typicalDurationDays?: number;
+  isBuiltIn?: boolean;
+}
+
+export type SuggestionSortBy = 'efficiency' | 'totalDaysOff' | 'startDate' | 'vacationDaysUsed';
+
+export interface SuggestionFilters {
+  months: number[];
+  seasons: string[];
+  minDuration?: number;
+  maxDuration?: number;
+  minEfficiency?: number;
+  excludeDateRanges: Array<{ start: string; end: string }>;
+  excludeHolidayNames: string[];
+  sortBy: SuggestionSortBy;
+}
+
+export interface VacationBudget {
+  id: string;
+  planId?: string;
+  periodLabel: string;
+  startDate: string;
+  endDate: string;
+  estimatedTravel: number;
+  estimatedLodging: number;
+  estimatedFood: number;
+  estimatedOther: number;
+  currency: string;
+  peakSeasonMultiplier?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  daysBeforeVacation: number[];
+  ptoRequestDeadlineDays?: number;
+  bookingWindowDays?: number;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  color?: string;
+  timeOff: string[]; // YYYY-MM-DD dates
+}
+
+export interface WishlistItem {
+  id: string;
+  name: string;
+  priority: number;
+  startDate?: string;
+  endDate?: string;
+  preferredMonths?: number[]; // 1-12
+  notes?: string;
+}
+
+export interface PlanVersion {
+  id: string;
+  planId: string;
+  label: string;
+  snapshot: HolidayPlan;
+  createdAt: string;
+}
 

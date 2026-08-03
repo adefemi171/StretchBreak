@@ -1,29 +1,41 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { HolidayPlanner } from './components/HolidayPlanner/HolidayPlanner';
 import { Calendar } from './components/Calendar/Calendar';
 import { StatsPanel } from './components/Statistics/StatsPanel';
 import { PlanList } from './components/PlanManager/PlanList';
 import { PlanBreakdown } from './components/PlanManager/PlanBreakdown';
+import { PlanVersions } from './components/PlanManager/PlanVersions';
+import { MultiYearOverview } from './components/MultiYear/MultiYearOverview';
 import { ChatAssistant } from './components/AI/ChatAssistant';
 import { PlanningConfigPanel } from './components/PlanningConfig/PlanningConfigPanel';
 import { ExportPanel } from './components/Export/ExportPanel';
 import { CountrySelector } from './components/CountrySelector';
 import { RegionSelectorDropdown } from './components/RegionSelectorDropdown';
-import { useHolidays } from './hooks/useHolidays';
+import { VacationAnalytics } from './components/Analytics/VacationAnalytics';
+import { OfflineIndicator } from './components/OfflineIndicator/OfflineIndicator';
+import { TeamPanel } from './components/Team/TeamPanel';
+import { WishlistPanel } from './components/Wishlist/WishlistPanel';
+import { PublicCalendarToggle } from './components/Social/PublicCalendarToggle';
+import { useMultiYearHolidays } from './hooks/useMultiYearHolidays';
 import { usePlans } from './hooks/usePlans';
 import { useAI } from './hooks/useAI';
 import { usePreferences } from './hooks/usePreferences';
 import { useLocation } from './hooks/useLocation';
+import { useTheme } from './hooks/useTheme';
+import { useAccessibility } from './hooks/useAccessibility';
 import { createPlanId, getAllPlans, clearAllPlans, getUsedStrategies } from './services/planStorage';
-import { getSharedPlanFromUrl } from './services/shareService';
-import { setTotalPTODays, getTotalPTODays, getRemainingPTODays, hasSavedPlansWithPTO, resetAllPTOData, getAvailablePTODaysInput } from './services/ptoTracking';
+import { getSharedPlanFromUrl, getSharedTemplateFromUrl } from './services/shareService';
+import { saveTemplate } from './services/templateStorage';
+import { setTotalPTODays, getTotalPTODays, getRemainingPTODays, hasSavedPlansWithPTO, resetAllPTOData, getAvailablePTODaysInput, getCarryover, getEffectiveAvailablePTODays, isCarryoverUsable } from './services/ptoTracking';
 import { SettingsTab } from './components/Settings/SettingsTab';
 import { BridgeBoard } from './components/BridgeBoard/BridgeBoard';
 import { NaturalLanguageInput } from './components/NaturalLanguage/NaturalLanguageInput';
 import { StretchShare } from './components/Share/StretchShare';
+import { BudgetCalculator } from './components/Budget/BudgetCalculator';
 import { optimizeByStrategy } from './utils/strategyOptimizer';
 import { filterHolidaysByRegions } from './utils/holidayFilter';
 import { parseDateString, formatDate } from './utils/dateUtils';
+import { checkRemindersOnLoad } from './services/reminderService';
 import { startOfYear, endOfYear, isPast, parseISO, startOfDay, isSameDay, eachDayOfInterval } from 'date-fns';
 import type { HolidayPlan, PlanningConfig, PlanSuggestion, VacationStrategy } from './utils/types';
 import './App.css';
@@ -35,8 +47,9 @@ function App() {
   });
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<HolidayPlan | null>(null);
-  const [activeTab, setActiveTab] = useState<'planner' | 'plans' | 'chat' | 'settings'>('planner');
+  const [activeTab, setActiveTab] = useState<'planner' | 'plans' | 'insights' | 'chat' | 'settings' | 'team'>('planner');
   const [shouldApplyAutoDetect, setShouldApplyAutoDetect] = useState(true);
+  const [showMultiYearView, setShowMultiYearView] = useState(false);
   const plannerViewRef = useRef<HTMLDivElement>(null);
   
   // Initialize PTO from saved plans or localStorage
@@ -57,14 +70,18 @@ function App() {
   const [planningConfig, setPlanningConfig] = useState<PlanningConfig>(() => {
     const initialPTO = initializePTO();
     const persistedInput = getAvailablePTODaysInput();
+    const carryover = getCarryover();
+    const effectivePTO = getEffectiveAvailablePTODays();
+    
     return {
-      availablePTODays: persistedInput > 0 ? persistedInput : initialPTO,
+      availablePTODays: persistedInput > 0 ? persistedInput : (effectivePTO > 0 ? effectivePTO : initialPTO),
       timeframe: {
         type: 'calendar-year',
         year: new Date().getFullYear(),
       },
       companyHolidays: [],
       selectedRegions: [],
+      carryover: carryover.days > 0 && carryover.expiryMonth > 0 ? carryover : undefined,
     };
   });
   
@@ -73,6 +90,29 @@ function App() {
     : planningConfig.timeframe.startDate 
       ? new Date(planningConfig.timeframe.startDate).getFullYear()
       : new Date().getFullYear();
+
+  const planningYears = useMemo(() => {
+    if (
+      planningConfig.timeframe.type === 'custom' &&
+      planningConfig.timeframe.startDate &&
+      planningConfig.timeframe.endDate
+    ) {
+      const startY = new Date(planningConfig.timeframe.startDate).getFullYear();
+      const endY = new Date(planningConfig.timeframe.endDate).getFullYear();
+      const years: number[] = [];
+      for (let y = Math.min(startY, endY); y <= Math.max(startY, endY); y++) {
+        years.push(y);
+      }
+      return years.length > 0 ? years : [year];
+    }
+    return [year];
+  }, [
+    planningConfig.timeframe.type,
+    planningConfig.timeframe.startDate,
+    planningConfig.timeframe.endDate,
+    year,
+  ]);
+
   const [optimizedSuggestions, setOptimizedSuggestions] = useState<any[]>([]);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [planName, setPlanName] = useState('');
@@ -87,31 +127,38 @@ function App() {
     setOptimizedSuggestions([]);
   }, [year, countryCode]);
   
-  const { holidays: allHolidays, loading: holidaysLoading, error: holidaysError } = useHolidays(year, countryCode);
+  const { holidaysByYear, loading: holidaysLoading, error: holidaysError } = useMultiYearHolidays(planningYears, countryCode);
+  const allHolidays = useMemo(
+    () => Array.from(holidaysByYear.values()).flat(),
+    [holidaysByYear]
+  );
   
   const holidays = planningConfig.selectedRegions && planningConfig.selectedRegions.length > 0
     ? filterHolidaysByRegions(allHolidays, planningConfig.selectedRegions)
     : allHolidays;
   
-  const { addPlan, plans, loadPlans } = usePlans();
+  const { addPlan, updatePlan, deletePlan, plans, loadPlans } = usePlans();
   const { aiSuggestions, loading: aiLoading, error: aiError, generateSuggestions, isAIAvailable, aiChecked } = useAI();
   const { preferences, updateFromPlan } = usePreferences();
   const { detectedCountry, isDetecting, detectLocation } = useLocation();
+  const { themeMode, setThemeMode } = useTheme();
+  const { contrast, setContrast, fontScale, setFontScale } = useAccessibility();
   
   useEffect(() => {
     detectLocation();
+    checkRemindersOnLoad();
   }, []);
   
   // Update remaining PTO when plans change
   useEffect(() => {
     if (getTotalPTODays() > 0) {
-      const remaining = getRemainingPTODays();
+      const remaining = getEffectiveAvailablePTODays(new Date(), year);
       setPlanningConfig(prev => ({
         ...prev,
         availablePTODays: remaining,
       }));
     }
-  }, [plans]);
+  }, [plans, year]);
 
   useEffect(() => {
     if (holidays.length > 0 && !holidaysLoading && aiChecked && isAIAvailable) {
@@ -125,25 +172,48 @@ function App() {
   
   useEffect(() => {
     const sharedPlan = getSharedPlanFromUrl();
-    if (sharedPlan) {
-      const newPlan: HolidayPlan = {
-        id: createPlanId(),
-        name: sharedPlan.name || 'Shared Plan',
-        description: sharedPlan.description,
-        countryCode: sharedPlan.countryCode || 'US',
-        year: sharedPlan.year || new Date().getFullYear(),
-        vacationDays: sharedPlan.vacationDays || [],
-        publicHolidays: sharedPlan.publicHolidays || [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      addPlan(newPlan);
-      setSelectedPlan(newPlan);
-      window.history.replaceState({}, '', window.location.pathname);
-      alert(`Shared plan "${newPlan.name}" has been imported!`);
-    }
+    if (!sharedPlan) return;
+
+    const planName = sharedPlan.name || 'Shared Plan';
+    const dayCount = Array.isArray(sharedPlan.vacationDays) ? sharedPlan.vacationDays.length : 0;
+    const shouldImport = window.confirm(
+      `Import shared plan "${planName}" (${dayCount} vacation day${dayCount === 1 ? '' : 's'})?\n\n` +
+        'This will save it as a new plan on this device. Links are not encrypted — only import plans you trust.'
+    );
+
+    window.history.replaceState({}, '', window.location.pathname);
+    if (!shouldImport) return;
+
+    const newPlan: HolidayPlan = {
+      id: createPlanId(),
+      name: planName,
+      description: sharedPlan.description,
+      countryCode: sharedPlan.countryCode || 'US',
+      year: sharedPlan.year || new Date().getFullYear(),
+      vacationDays: sharedPlan.vacationDays || [],
+      publicHolidays: sharedPlan.publicHolidays || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    addPlan(newPlan);
+    setSelectedPlan(newPlan);
   }, [addPlan]);
+
+  useEffect(() => {
+    const sharedTemplate = getSharedTemplateFromUrl();
+    if (!sharedTemplate) return;
+
+    const shouldImport = window.confirm(
+      `Import vacation template "${sharedTemplate.name}" on this device?\n\n` +
+        'Local import only — not a cloud marketplace. Links are not encrypted.'
+    );
+    window.history.replaceState({}, '', window.location.pathname);
+    if (!shouldImport) return;
+
+    saveTemplate(sharedTemplate);
+    setActiveTab('planner');
+  }, []);
   
   useEffect(() => {
     if (detectedCountry && shouldApplyAutoDetect) {
@@ -227,7 +297,7 @@ function App() {
     updateFromPlan(plan);
     
     // Update remaining PTO
-    const remaining = getRemainingPTODays();
+    const remaining = getEffectiveAvailablePTODays(new Date(), year);
     setPlanningConfig(prev => ({
       ...prev,
       availablePTODays: remaining,
@@ -238,7 +308,7 @@ function App() {
 
   const applyStrategyAndSave = (strategyToApply: VacationStrategy) => {
     // Use remaining PTO if available, otherwise use configured PTO
-    const availablePTO = getTotalPTODays() > 0 ? getRemainingPTODays() : planningConfig.availablePTODays;
+    const availablePTO = getTotalPTODays() > 0 ? getEffectiveAvailablePTODays(new Date(), year) : planningConfig.availablePTODays;
     
     // Get already used dates from saved plans to avoid overlap
     const existingPlans = getAllPlans();
@@ -296,6 +366,15 @@ function App() {
       strategy: strategyToApply,
       startDate,
       endDate,
+      carryover: planningConfig.carryover &&
+        planningConfig.carryover.days > 0 &&
+        isCarryoverUsable(planningConfig.carryover.expiryMonth, new Date(), year)
+        ? {
+            days: planningConfig.carryover.days,
+            expiryMonth: planningConfig.carryover.expiryMonth,
+            year,
+          }
+        : undefined,
     });
     
     setOptimizedSuggestions(suggestions);
@@ -361,7 +440,7 @@ function App() {
         addPlan(plan);
         
         // Update remaining PTO
-        const remaining = getRemainingPTODays();
+        const remaining = getEffectiveAvailablePTODays(new Date(), year);
         setPlanningConfig(prev => ({
           ...prev,
           availablePTODays: remaining,
@@ -377,7 +456,7 @@ function App() {
 
   const handleOptimize = () => {
     // Use remaining PTO if available, otherwise use configured PTO
-    const availablePTO = getTotalPTODays() > 0 ? getRemainingPTODays() : planningConfig.availablePTODays;
+    const availablePTO = getTotalPTODays() > 0 ? getEffectiveAvailablePTODays(new Date(), year) : planningConfig.availablePTODays;
     
     if (availablePTO === 0) {
       alert('No remaining PTO days available. Please add more PTO days or remove existing plans.');
@@ -424,6 +503,15 @@ function App() {
       strategy: planningConfig.strategy || 'balanced',
       startDate,
       endDate,
+      carryover: planningConfig.carryover &&
+        planningConfig.carryover.days > 0 &&
+        isCarryoverUsable(planningConfig.carryover.expiryMonth, new Date(), year)
+        ? {
+            days: planningConfig.carryover.days,
+            expiryMonth: planningConfig.carryover.expiryMonth,
+            year,
+          }
+        : undefined,
     });
     
     setOptimizedSuggestions(suggestions);
@@ -488,7 +576,7 @@ function App() {
         addPlan(plan);
         
         // Update remaining PTO
-        const remaining = getRemainingPTODays();
+        const remaining = getEffectiveAvailablePTODays(new Date(), year);
         setPlanningConfig(prev => ({
           ...prev,
           availablePTODays: remaining,
@@ -531,6 +619,9 @@ function App() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <header className="app-header">
         <div className="header-content">
           <div className="brand-mark" aria-hidden="true">
@@ -555,7 +646,7 @@ function App() {
               }}
               disabled={isDetecting}
               className="refresh-location-button"
-              title="Refresh and use auto-detected country"
+              title="Detect country via IP/geolocation (uses third-party lookup services)"
               aria-label="Detect country from location"
             >
               {isDetecting ? '…' : '↻'}
@@ -578,36 +669,49 @@ function App() {
         </div>
       </div>
 
-      <nav className="app-tabs" aria-label="Main">
-        <button
-          className={`tab ${activeTab === 'planner' ? 'active' : ''}`}
-          onClick={() => setActiveTab('planner')}
-        >
-          Planner
-        </button>
-        <button
-          className={`tab ${activeTab === 'plans' ? 'active' : ''}`}
-          onClick={() => setActiveTab('plans')}
-        >
-          Saved Plans
-        </button>
-        {isAIAvailable && (
+      <nav className="app-tabs" role="tablist" aria-label="Main">
+        {(
+          [
+            { id: 'planner' as const, label: 'Planner' },
+            { id: 'plans' as const, label: 'Saved Plans' },
+            { id: 'insights' as const, label: 'Analytics' },
+            { id: 'team' as const, label: 'Team' },
+            ...(isAIAvailable ? [{ id: 'chat' as const, label: 'AI Assistant' }] : []),
+            { id: 'settings' as const, label: 'Settings' },
+          ]
+        ).map((tab, index, tabs) => (
           <button
-            className={`tab ${activeTab === 'chat' ? 'active' : ''}`}
-            onClick={() => setActiveTab('chat')}
+            key={tab.id}
+            type="button"
+            role="tab"
+            id={`tab-${tab.id}`}
+            aria-selected={activeTab === tab.id}
+            aria-controls="main-content"
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') {
+                return;
+              }
+              e.preventDefault();
+              let next = index;
+              if (e.key === 'ArrowRight') next = (index + 1) % tabs.length;
+              if (e.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+              if (e.key === 'Home') next = 0;
+              if (e.key === 'End') next = tabs.length - 1;
+              setActiveTab(tabs[next].id);
+              requestAnimationFrame(() => {
+                document.getElementById(`tab-${tabs[next].id}`)?.focus();
+              });
+            }}
           >
-            AI Assistant
+            {tab.label}
           </button>
-        )}
-        <button
-          className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          Settings
-        </button>
+        ))}
       </nav>
       
-      <main className="app-main">
+      <main id="main-content" className="app-main" role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         {activeTab === 'planner' && (
           <div className="planner-view" ref={plannerViewRef}>
             {showConfig ? (
@@ -618,6 +722,8 @@ function App() {
                   countryCode={countryCode}
                   onConfigChange={setPlanningConfig}
                   onOptimize={handleOptimize}
+                  suggestions={optimizedSuggestions.length > 0 ? optimizedSuggestions : aiSuggestions}
+                  onApplySuggestion={applySuggestionToPlan}
                 />
 
                 <BridgeBoard
@@ -735,7 +841,7 @@ function App() {
                     addPlan(plan);
                     
                     // Update remaining PTO
-                    const remaining = getRemainingPTODays();
+                    const remaining = getEffectiveAvailablePTODays(new Date(), year);
                     setPlanningConfig(prev => ({
                       ...prev,
                       availablePTODays: remaining,
@@ -747,7 +853,19 @@ function App() {
                   vacationDays={selectedDates}
                   holidays={holidays}
                   availablePTODays={planningConfig.availablePTODays}
+                  onViewInsights={() => setActiveTab('insights')}
                 />
+
+                {selectedDates.length > 0 && (() => {
+                  const sortedDates = [...selectedDates].sort();
+                  return (
+                    <BudgetCalculator
+                      startDate={sortedDates[0]}
+                      endDate={sortedDates[sortedDates.length - 1]}
+                      periodLabel="Current Plan"
+                    />
+                  );
+                })()}
 
                 <StretchShare
                   vacationDays={selectedDates}
@@ -865,6 +983,11 @@ function App() {
                 </button>
               </div>
               
+              <PlanVersions
+                plan={selectedPlan}
+                onPlanUpdated={loadPlans}
+              />
+              
               <PlanBreakdown
                 plan={selectedPlan}
                 holidays={holidays}
@@ -874,12 +997,27 @@ function App() {
                 vacationDays={selectedDates}
                 holidays={holidays}
                 availablePTODays={selectedPlan.availablePTODays}
+                onViewInsights={() => setActiveTab('insights')}
               />
+
+              {selectedPlan.vacationDays && selectedPlan.vacationDays.length > 0 && (() => {
+                const sortedDates = [...selectedPlan.vacationDays].sort();
+                return (
+                  <BudgetCalculator
+                    planId={selectedPlan.id}
+                    startDate={sortedDates[0]}
+                    endDate={sortedDates[sortedDates.length - 1]}
+                    periodLabel={selectedPlan.name}
+                  />
+                );
+              })()}
               
               <ExportPanel
                 plan={selectedPlan}
                 currentSelectedDates={selectedDates}
               />
+
+              <PublicCalendarToggle plan={selectedPlan} />
               
               <div className="holiday-planner">
                 <Calendar
@@ -898,37 +1036,100 @@ function App() {
               </div>
             </>
           ) : (
-            <PlanList
-              onSelectPlan={(plan) => setSelectedPlan(plan)}
-              currentVacationDays={selectedDates}
-              currentHolidays={holidays}
-              currentCountryCode={countryCode}
-              currentYear={year}
-              onPlanDeleted={() => {
-                // Recalculate remaining PTO when a plan is deleted
-                const remaining = getRemainingPTODays();
-                setPlanningConfig(prev => ({
-                  ...prev,
-                  availablePTODays: remaining,
-                }));
-              }}
-            />
+            <>
+              <div className="config-header">
+                <button
+                  onClick={() => setShowMultiYearView(!showMultiYearView)}
+                  className="view-toggle-button"
+                  style={{
+                    marginBottom: '1rem',
+                    padding: '0.5rem 1rem',
+                    background: showMultiYearView ? 'var(--accent)' : 'var(--surface)',
+                    color: showMultiYearView ? 'white' : 'var(--ink)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {showMultiYearView ? '← Single Year View' : 'Multi-Year Overview'}
+                </button>
+              </div>
+
+              {showMultiYearView ? (
+                <MultiYearOverview
+                  onSelectPlan={(plan) => {
+                    setSelectedPlan(plan);
+                    setShowMultiYearView(false);
+                  }}
+                />
+              ) : (
+                <PlanList
+                  plans={plans}
+                  onUpdatePlan={updatePlan}
+                  onDeletePlan={deletePlan}
+                  onSelectPlan={(plan) => setSelectedPlan(plan)}
+                  currentVacationDays={selectedDates}
+                  currentHolidays={holidays}
+                  currentCountryCode={countryCode}
+                  currentYear={year}
+                />
+              )}
+            </>
           )
+        )}
+        
+        {activeTab === 'insights' && (
+          <VacationAnalytics
+            plans={plans}
+            totalAvailablePTO={getTotalPTODays()}
+            countryCode={countryCode}
+            year={year}
+            holidays={holidays}
+          />
         )}
         
         {activeTab === 'chat' && isAIAvailable && (
           <ChatAssistant
             holidays={holidays}
             year={year}
+            countryCode={countryCode}
             currentPlan={selectedDates.length > 0 ? { vacationDays: selectedDates } : undefined}
             preferences={preferences}
           />
         )}
         
+        {activeTab === 'team' && (
+          <>
+            <TeamPanel
+              selectedDates={selectedDates}
+              selectedPlan={selectedPlan}
+              holidays={holidays}
+            />
+            
+            <WishlistPanel
+              suggestions={optimizedSuggestions.length > 0 ? optimizedSuggestions : aiSuggestions}
+              onApplySuggestion={applySuggestionToPlan}
+            />
+          </>
+        )}
+        
         {activeTab === 'settings' && (
-          <SettingsTab onResetAll={handleResetAll} />
+          <SettingsTab 
+            onResetAll={handleResetAll}
+            themeMode={themeMode}
+            onThemeChange={setThemeMode}
+            contrast={contrast}
+            onContrastChange={setContrast}
+            fontScale={fontScale}
+            onFontScaleChange={setFontScale}
+            countryCode={countryCode}
+          />
         )}
       </main>
+      
+      <OfflineIndicator />
     </div>
   );
 }

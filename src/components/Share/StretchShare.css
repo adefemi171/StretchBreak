@@ -19,7 +19,7 @@
 .stretch-share-preview {
   margin: 0 0 0.9rem;
   padding: 0.95rem 1rem;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-family: var(--font-body);

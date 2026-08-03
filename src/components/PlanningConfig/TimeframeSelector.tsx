@@ -24,7 +24,8 @@ export const TimeframeSelector = ({
   onEndDateChange,
 }: TimeframeSelectorProps) => {
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 3 }, (_, i) => currentYear + i);
+  // Support current-1 through current+3 (5 years total)
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - 1 + i);
   
   return (
     <div className="timeframe-selector">

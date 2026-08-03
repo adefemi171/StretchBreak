@@ -19,7 +19,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: white;
+  background: var(--surface-raised);
 }
 
 .calendar-weekdays {

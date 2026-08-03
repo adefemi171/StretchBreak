@@ -1,4 +1,4 @@
-import type { HolidayPlan } from '../utils/types';
+import type { HolidayPlan, VacationTemplate } from '../utils/types';
 
 export const encodePlanForSharing = (plan: HolidayPlan): string => {
   const shareablePlan = {
@@ -13,11 +13,11 @@ export const encodePlanForSharing = (plan: HolidayPlan): string => {
       name: h.name,
     })),
   };
-  
+
   try {
     const jsonString = JSON.stringify(shareablePlan);
     return btoa(encodeURIComponent(jsonString));
-  } catch (error) {
+  } catch {
     throw new Error('Failed to encode plan for sharing');
   }
 };
@@ -26,13 +26,13 @@ export const decodeSharedPlan = (encoded: string): Partial<HolidayPlan> | null =
   try {
     const jsonString = decodeURIComponent(atob(encoded));
     const plan = JSON.parse(jsonString);
-    
+
     if (!plan.countryCode || !plan.year || !Array.isArray(plan.vacationDays)) {
       throw new Error('Invalid plan data');
     }
-    
+
     return plan;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -46,12 +46,101 @@ export const generateShareUrl = (plan: HolidayPlan): string => {
 export const getSharedPlanFromUrl = (): Partial<HolidayPlan> | null => {
   const urlParams = new URLSearchParams(window.location.search);
   const shareParam = urlParams.get('share');
-  
+
   if (!shareParam) {
     return null;
   }
-  
+
   return decodeSharedPlan(shareParam);
+};
+
+/** Local template share — encodes template prefs into the URL (not a cloud marketplace). */
+export const encodeTemplateForSharing = (template: VacationTemplate): string => {
+  const payload = {
+    kind: 'stretchbreak-template' as const,
+    name: template.name,
+    description: template.description,
+    strategy: template.strategy,
+    preferredMonths: template.preferredMonths,
+    typicalDurationDays: template.typicalDurationDays,
+  };
+  try {
+    return btoa(encodeURIComponent(JSON.stringify(payload)));
+  } catch {
+    throw new Error('Failed to encode template for sharing');
+  }
+};
+
+export const decodeSharedTemplate = (
+  encoded: string
+): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
+  try {
+    const parsed = JSON.parse(decodeURIComponent(atob(encoded)));
+    if (!parsed || typeof parsed.name !== 'string' || !parsed.name.trim()) {
+      return null;
+    }
+    if (parsed.kind && parsed.kind !== 'stretchbreak-template') {
+      return null;
+    }
+    return {
+      name: parsed.name.trim(),
+      description: typeof parsed.description === 'string' ? parsed.description : undefined,
+      strategy: parsed.strategy,
+      preferredMonths: Array.isArray(parsed.preferredMonths) ? parsed.preferredMonths : undefined,
+      typicalDurationDays:
+        typeof parsed.typicalDurationDays === 'number' ? parsed.typicalDurationDays : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const generateTemplateShareUrl = (template: VacationTemplate): string => {
+  const encoded = encodeTemplateForSharing(template);
+  const baseUrl = window.location.origin + window.location.pathname;
+  return `${baseUrl}?template=${encoded}`;
+};
+
+export const getSharedTemplateFromUrl = (): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const param = urlParams.get('template');
+  if (!param) return null;
+  return decodeSharedTemplate(param);
+};
+
+export const exportTemplateJson = (template: VacationTemplate): string => {
+  return JSON.stringify(
+    {
+      kind: 'stretchbreak-template',
+      name: template.name,
+      description: template.description,
+      strategy: template.strategy,
+      preferredMonths: template.preferredMonths,
+      typicalDurationDays: template.typicalDurationDays,
+    },
+    null,
+    2
+  );
+};
+
+export const parseTemplateJson = (
+  raw: string
+): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.name !== 'string' || !parsed.name.trim()) return null;
+    if (parsed.kind && parsed.kind !== 'stretchbreak-template') return null;
+    return {
+      name: parsed.name.trim(),
+      description: typeof parsed.description === 'string' ? parsed.description : undefined,
+      strategy: parsed.strategy,
+      preferredMonths: Array.isArray(parsed.preferredMonths) ? parsed.preferredMonths : undefined,
+      typicalDurationDays:
+        typeof parsed.typicalDurationDays === 'number' ? parsed.typicalDurationDays : undefined,
+    };
+  } catch {
+    return null;
+  }
 };
 
 export const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -71,8 +160,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
       document.body.removeChild(textArea);
       return successful;
     }
-  } catch (error) {
+  } catch {
     return false;
   }
 };
-

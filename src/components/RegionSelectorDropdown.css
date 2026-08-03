@@ -15,10 +15,16 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  background-color: white;
+  background-color: var(--surface-solid);
   color: var(--ink);
   cursor: pointer;
   min-width: 150px;
+  color-scheme: inherit;
+}
+
+.region-select option {
+  background: var(--surface-solid);
+  color: var(--ink);
 }
 
 .region-select:focus {
@@ -30,5 +36,5 @@
 .region-select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  background-color: rgba(20, 36, 40, 0.04);
+  background-color: var(--surface);
 }

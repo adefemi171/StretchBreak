@@ -21,6 +21,16 @@
   font-size: 1.35rem;
 }
 
+.no-results {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(20, 36, 40, 0.03);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
 .suggestions-list {
   display: flex;
   flex-direction: column;
@@ -37,7 +47,7 @@
 
 .suggestion-card:hover {
   border-color: rgba(12, 124, 116, 0.35);
-  background: white;
+  background: var(--surface-solid);
   transform: translateY(-1px);
 }
 

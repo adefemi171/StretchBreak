@@ -1,0 +1,359 @@
+.team-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.team-panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: var(--ink);
+}
+
+.team-subtitle {
+  margin: 0 0 2rem 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.team-conflict-warning {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-sm);
+}
+
+.team-conflict-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.team-conflict-icon {
+  font-size: 1.25rem;
+}
+
+.team-conflict-text {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.team-conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.team-conflict-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--surface-solid);
+  border-radius: var(--radius-sm);
+}
+
+.team-conflict-member {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.team-member-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.team-conflict-member-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.team-conflict-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.team-conflict-date {
+  padding: 0.25rem 0.5rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.team-conflict-more {
+  padding: 0.25rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.team-members-section {
+  margin-bottom: 2rem;
+}
+
+.team-members-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.team-members-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
+.team-add-button {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out);
+}
+
+.team-add-button:hover {
+  background: var(--accent-hover);
+}
+
+.team-member-form {
+  padding: 1.5rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+}
+
+.team-member-form label {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.team-member-form input[type="text"],
+.team-member-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.team-member-form input[type="color"] {
+  margin-top: 0.5rem;
+  width: 80px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.team-member-form textarea {
+  font-family: 'Monaco', 'Courier New', monospace;
+  resize: vertical;
+}
+
+.team-form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.team-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.team-save-button {
+  padding: 0.625rem 1.25rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out);
+}
+
+.team-save-button:hover {
+  background: var(--accent-hover);
+}
+
+.team-cancel-button {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.team-cancel-button:hover {
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+
+.team-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.team-empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.team-member-card {
+  padding: 1.25rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: box-shadow 0.2s var(--ease-out);
+}
+
+.team-member-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.team-member-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.team-member-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.team-member-title h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: var(--ink);
+}
+
+.team-member-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.team-edit-button,
+.team-delete-button {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.team-edit-button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.team-delete-button:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.team-member-timeoff {
+  margin-top: 0.75rem;
+}
+
+.team-member-no-dates {
+  margin: 0;
+  color: var(--muted-soft);
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.team-timeoff-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.team-timeoff-date {
+  padding: 0.375rem 0.625rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.team-timeoff-more {
+  padding: 0.375rem 0.625rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.team-share-section {
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.team-share-section h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
+.team-share-hint {
+  margin: 0 0 1rem 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.team-share-button {
+  padding: 0.75rem 1.5rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out);
+}
+
+.team-share-button:hover {
+  background: var(--accent-hover);
+}

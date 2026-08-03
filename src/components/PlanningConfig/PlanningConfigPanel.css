@@ -52,6 +52,30 @@
   min-width: 0;
 }
 
+.templates-toggle-section {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.templates-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  transition: color 0.2s var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.templates-toggle-btn:hover {
+  color: var(--accent);
+}
+
 .optimize-section {
   margin-top: 2rem;
   padding-top: 1.75rem;

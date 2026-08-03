@@ -15,6 +15,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.11",
     "date-fns": "^4.1.0",
     "netlify-cli": "^23.13.0",
     "openai": "^6.15.0",

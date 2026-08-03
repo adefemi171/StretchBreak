@@ -16,7 +16,13 @@
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   min-width: 200px;
-  background: white;
+  background: var(--surface-solid);
+  color: var(--ink);
+  color-scheme: inherit;
+}
+
+.country-select option {
+  background: var(--surface-solid);
   color: var(--ink);
 }
 
@@ -27,6 +33,7 @@
 }
 
 .country-select:disabled {
-  background-color: rgba(20, 36, 40, 0.04);
+  background-color: var(--surface);
+  opacity: 0.65;
   cursor: not-allowed;
 }

@@ -1,6 +1,7 @@
 /**
- * Get user's country code based on their IP address
- * Uses free geolocation APIs with CORS support
+ * Get user's country code based on their IP address.
+ * Uses third-party geolocation APIs (ipapi.co, ip-api.com, ipgeolocation.io).
+ * Your IP may be sent to those providers when auto-detect is used.
  */
 export const detectCountryFromIP = async (): Promise<string | null> => {
   // Try multiple services in order until one works
@@ -108,9 +109,9 @@ export const detectCountryFromIP = async (): Promise<string | null> => {
 };
 
 /**
- * Get user's country code using browser geolocation API
- * More accurate but requires user permission
- * Note: This may be blocked by browser extensions or privacy settings
+ * Get user's country code using browser geolocation API.
+ * More accurate but requires user permission.
+ * Coordinates may be sent to BigDataCloud / geocode.xyz for reverse geocoding.
  */
 export const detectCountryFromGeolocation = async (): Promise<string | null> => {
   return new Promise((resolve) => {

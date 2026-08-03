@@ -1,5 +1,6 @@
 import { formatDateDisplay, isWeekendDay } from '../../utils/dateUtils';
 import { detectPlanOverlaps } from '../../utils/planOverlap';
+import { analyzeConflicts } from '../../utils/conflictDetection';
 import { getAllPlans } from '../../services/planStorage';
 import type { HolidayPlan, PublicHoliday } from '../../utils/types';
 import { eachDayOfInterval, parseISO, subDays, addDays, isWeekend, format } from 'date-fns';
@@ -54,7 +55,7 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
   const weekendsInPeriod: string[] = [];
 
   for (const day of allDays) {
-    const dateStr = day.toISOString().split('T')[0];
+    const dateStr = format(day, 'yyyy-MM-dd');
     const isHoliday = holidays.find(h => h.date === dateStr);
     const isWeekend = isWeekendDay(day);
     const isVacationDay = plan.vacationDays.includes(dateStr);
@@ -77,15 +78,69 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
   const allPlans = getAllPlans();
   const overlapInfo = detectPlanOverlaps(plan, allPlans);
   const hasOverlaps = overlapInfo.overlapCount > 0;
+  
+  // Get used dates from all plans (excluding current plan)
+  const usedDates = new Set<string>();
+  allPlans.forEach(p => {
+    if (p.id !== plan.id) {
+      p.vacationDays.forEach(day => {
+        if (day && typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+          usedDates.add(day.trim());
+        }
+      });
+    }
+  });
+  
+  // Use the plan's own holiday lists to avoid false positives from live country/region switches
+  const conflictAnalysis = analyzeConflicts(
+    plan.vacationDays,
+    plan.publicHolidays?.length ? plan.publicHolidays : holidays,
+    plan.companyHolidays || [],
+    usedDates
+  );
 
   return (
     <div className="plan-breakdown">
       <h3>Plan Breakdown: {plan.name}</h3>
       
+      {conflictAnalysis.hasConflicts && (
+        <div className="breakdown-holiday-warning">
+          <div className="breakdown-warning-header">
+            <span className="breakdown-warning-text">
+              {conflictAnalysis.holidayConflicts.length} selected day{conflictAnalysis.holidayConflicts.length !== 1 ? 's' : ''} also {conflictAnalysis.holidayConflicts.length === 1 ? 'is' : 'are'} a holiday — free that PTO if it was unintentional
+            </span>
+          </div>
+          <div className="breakdown-conflict-list">
+            {conflictAnalysis.holidayConflicts.map(conflict => (
+              <div key={conflict.vacationDate} className="breakdown-conflict-item">
+                <span className="conflict-date">{formatDateDisplay(conflict.vacationDate)}</span>
+                <span className="conflict-name">
+                  {'localName' in conflict.conflictingHoliday 
+                    ? conflict.conflictingHoliday.localName 
+                    : conflict.conflictingHoliday.name}
+                  {conflict.type === 'company' ? ' (company)' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+          {conflictAnalysis.alternativeDates.length > 0 && (
+            <div className="breakdown-alternatives">
+              <span className="alternatives-label">Nearby options:</span>
+              <div className="alternatives-list">
+                {conflictAnalysis.alternativeDates.map(altDate => (
+                  <span key={altDate} className="alternative-date">
+                    {formatDateDisplay(altDate)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
       {hasOverlaps && (
         <div className="breakdown-overlap-warning">
           <div className="breakdown-overlap-header">
-            <span className="breakdown-overlap-icon">⚠️</span>
             <span className="breakdown-overlap-text">
               {overlapInfo.overlapCount} date{overlapInfo.overlapCount !== 1 ? 's' : ''} in this plan overlap with other saved plans
             </span>
@@ -123,7 +178,7 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
 
       <div className="breakdown-details">
         <div className="breakdown-section">
-          <h4>📅 Vacation Days (Take Off)</h4>
+          <h4>Vacation Days (Take Off)</h4>
           <div className="dates-list">
             {vacationDaysList.length > 0 ? (
               vacationDaysList.map(date => (
@@ -138,7 +193,7 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
         </div>
 
         <div className="breakdown-section">
-          <h4>🎉 Public Holidays</h4>
+          <h4>Public Holidays</h4>
           <div className="dates-list">
             {holidaysInPeriod.length > 0 ? (
               holidaysInPeriod.map(holiday => (

@@ -57,6 +57,40 @@
   transform: translateY(-1px);
 }
 
+.export-button.export-link {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}
+
+.export-button.secondary-button {
+  background: var(--ink-soft);
+}
+
+.export-button.secondary-button:hover {
+  background: var(--ink);
+}
+
+.export-button.ghost-button {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-soft);
+  padding: 0.6rem;
+  min-width: 40px;
+}
+
+.export-button.ghost-button:hover {
+  background: var(--surface);
+  border-color: var(--ink-soft);
+}
+
+.export-buttons-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .ooo-controls {
   display: flex;
   gap: 0.85rem;
@@ -79,7 +113,8 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  background: white;
+  background: var(--surface-solid);
+  color: var(--ink);
 }
 
 .generate-button {
@@ -104,7 +139,7 @@
   font-family: inherit;
   resize: vertical;
   margin-bottom: 0.55rem;
-  background: white;
+  background: var(--surface-solid);
   color: var(--ink);
 }
 
@@ -136,4 +171,44 @@
   display: block;
   margin-top: 0.25rem;
   color: var(--muted);
+}
+
+.webhook-config {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.webhook-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 0.5rem;
+}
+
+.webhook-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background: var(--surface-solid);
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+
+.webhook-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.webhook-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-style: italic;
 }

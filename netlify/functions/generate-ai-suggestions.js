@@ -1,61 +1,83 @@
 import { OpenAI } from 'openai';
+import {
+  guardAIRequest,
+  jsonResponse,
+  recordUsage,
+  sanitizeUserText,
+  PROMPT_HARDENING,
+} from './_shared/aiGuard.js';
+import { localDateString, upcomingHolidays } from './_shared/holidayDates.js';
+
+const MODEL = 'gpt-3.5-turbo';
 
 export const handler = async (event) => {
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-      body: '',
-    };
-  }
+  const blocked = await guardAIRequest(event);
+  if (blocked) return blocked;
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
+  const { body, cors } = event._aiGuard;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'OpenAI API key not configured' }),
-    };
+    return jsonResponse(500, { error: 'OpenAI API key not configured' }, cors);
   }
 
   try {
-    const { holidays, year, preferences } = JSON.parse(event.body);
+    const today = localDateString();
+    const year = Number.isFinite(body.year) ? body.year : new Date().getFullYear();
+    const holidays = upcomingHolidays(body.holidays, { limit: 40, today });
+    const preferences = body.preferences;
 
-    const openai = new OpenAI({
-      apiKey,
-    });
+    if (holidays.length === 0) {
+      return jsonResponse(400, { error: 'Holidays are required' }, cors);
+    }
+
+    const openai = new OpenAI({ apiKey });
 
     const holidaysList = holidays
-      .map(h => `${h.date}: ${h.localName} (${new Date(h.date).toLocaleDateString('en-US', { weekday: 'long' })})`)
+      .map((h) => {
+        const date = sanitizeUserText(String(h?.date || ''), 32);
+        const name = sanitizeUserText(String(h?.localName || ''), 80);
+        let weekday = '';
+        try {
+          const [y, m, d] = date.split('-').map(Number);
+          weekday = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' });
+        } catch {
+          weekday = '';
+        }
+        return `${date}: ${name}${weekday ? ` (${weekday})` : ''}`;
+      })
       .join('\n');
+
+    const preferredMonths =
+      preferences?.preferredMonths && Array.isArray(preferences.preferredMonths)
+        ? preferences.preferredMonths.slice(0, 12).map((m) => Number(m)).filter(Number.isFinite)
+        : [];
+    const typicalDuration =
+      typeof preferences?.typicalDuration === 'number' ? preferences.typicalDuration : null;
+    const efficiencyGoal =
+      typeof preferences?.efficiencyGoal === 'number' ? preferences.efficiencyGoal : null;
 
     const preferencesText = preferences
       ? `User preferences:
-- Preferred months: ${preferences.preferredMonths.join(', ')}
-- Typical duration: ${preferences.typicalDuration} days
-- Efficiency goal: ${preferences.efficiencyGoal.toFixed(2)}`
+- Preferred months: ${preferredMonths.join(', ') || 'none'}
+- Typical duration: ${typicalDuration ?? 'n/a'} days
+- Efficiency goal: ${efficiencyGoal != null ? efficiencyGoal.toFixed(2) : 'n/a'}`
       : 'No user preferences available';
 
-    const prompt = `You are an expert holiday planner. Analyze the public holidays and suggest optimal vacation periods.
+    const prompt = `Analyze upcoming public holidays and suggest optimal vacation periods.
 
-Year: ${year}
-Public holidays:
+Today's date: ${today}
+Planning year: ${year}
+Upcoming public holidays (on or after today):
 ${holidaysList}
 
 ${preferencesText}
 
-Suggest 3-5 optimal vacation periods that maximize days off while minimizing vacation days used. Consider:
+Suggest 3-5 optimal vacation periods that maximize days off while minimizing vacation days used.
+Hard rules:
+- Every suggestion startDate must be on or after ${today}. Never suggest past dates.
+- Only use holidays from the list above.
+
+Consider:
 - Bridge opportunities (e.g., take Mon-Wed before Thu-Fri holidays)
 - User preferences if available
 - Efficiency (total days off / vacation days used)
@@ -82,11 +104,11 @@ Return ONLY valid JSON array:
 ]`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: MODEL,
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful holiday planning assistant. Always return valid JSON arrays only.',
+          content: `${PROMPT_HARDENING} Always return valid JSON arrays only for this task.`,
         },
         {
           role: 'user',
@@ -94,6 +116,14 @@ Return ONLY valid JSON array:
         },
       ],
       temperature: 0.7,
+      max_tokens: 1500,
+    });
+
+    const usage = completion.usage || {};
+    await recordUsage({
+      model: MODEL,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
     });
 
     const content = completion.choices[0]?.message?.content;
@@ -101,33 +131,25 @@ Return ONLY valid JSON array:
       throw new Error('No response from AI');
     }
 
-    // Extract JSON from response
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response');
     }
 
     const suggestions = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(suggestions)) {
+      throw new Error('Invalid suggestions format');
+    }
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-      body: JSON.stringify(suggestions),
-    };
+    // Drop any past windows the model still returned
+    const futureSuggestions = suggestions.filter((s) => {
+      const start = String(s?.startDate || '').slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(start) && start >= today;
+    });
+
+    // Client expects { suggestions: [...] }
+    return jsonResponse(200, { suggestions: futureSuggestions }, cors);
   } catch (error) {
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ error: error.message || 'Internal server error' }),
-    };
+    return jsonResponse(500, { error: error.message || 'Internal server error' }, cors);
   }
 };
-

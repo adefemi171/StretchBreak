@@ -1,0 +1,36 @@
+{
+  "name": "StretchBreak",
+  "short_name": "StretchBreak",
+  "description": "Turn public holidays into longer escapes — plan PTO around the calendar that actually works.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eef3f2",
+  "theme_color": "#0c7c74",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

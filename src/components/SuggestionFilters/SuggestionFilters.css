@@ -1,0 +1,222 @@
+.suggestion-filters {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.filter-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.clear-filters-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  transition: color 0.2s var(--ease-out);
+}
+
+.clear-filters-btn:hover {
+  color: var(--accent-hover);
+}
+
+.filter-section {
+  margin-bottom: 1.25rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.5rem;
+}
+
+.month-chips,
+.season-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+  color: var(--ink-soft);
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.duration-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.duration-inputs input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface-solid);
+}
+
+.duration-inputs input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.range-separator {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.filter-section input[type='number'],
+.filter-section select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface-solid);
+}
+
+.filter-section input[type='number']:focus,
+.filter-section select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.excluded-ranges {
+  margin-bottom: 0.75rem;
+}
+
+.excluded-range-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.excluded-range-item span {
+  color: var(--ink-soft);
+}
+
+.excluded-range-item button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0;
+  margin-left: 0.5rem;
+  line-height: 1;
+}
+
+.excluded-range-item button:hover {
+  color: var(--accent-hover);
+}
+
+.exclude-range-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.exclude-range-form input[type='date'] {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface-solid);
+}
+
+.exclude-range-form button {
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+  transition: background 0.2s var(--ease-out);
+}
+
+.exclude-range-form button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.exclude-range-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exclude-range-form button:last-child {
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+}
+
+.exclude-range-form button:last-child:hover {
+  background: var(--border);
+}
+
+.add-exclude-btn {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s var(--ease-out);
+}
+
+.add-exclude-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

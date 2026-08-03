@@ -42,7 +42,7 @@
 .bridge-card:hover {
   transform: translateY(-2px);
   border-color: rgba(12, 124, 116, 0.35);
-  background: white;
+  background: var(--surface-solid);
 }
 
 .bridge-card-top {

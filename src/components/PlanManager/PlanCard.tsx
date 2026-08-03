@@ -1,5 +1,6 @@
 import { formatDateDisplay } from '../../utils/dateUtils';
-import { detectPlanOverlaps, type OverlapInfo } from '../../utils/planOverlap';
+import { detectPlanOverlaps } from '../../utils/planOverlap';
+import { analyzeConflicts } from '../../utils/conflictDetection';
 import type { HolidayPlan } from '../../utils/types';
 import './PlanCard.css';
 
@@ -23,14 +24,43 @@ export const PlanCard = ({
   const overlapInfo = detectPlanOverlaps(plan, allPlans);
   const hasOverlaps = overlapInfo.overlapCount > 0;
   
+  // Get used dates from all plans (excluding current plan)
+  const usedDates = new Set<string>();
+  allPlans.forEach(p => {
+    if (p.id !== plan.id) {
+      p.vacationDays.forEach(day => {
+        if (day && typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.trim())) {
+          usedDates.add(day.trim());
+        }
+      });
+    }
+  });
+  
+  // Only flag days that are both selected PTO and a holiday (usually company holidays added later)
+  const conflictAnalysis = analyzeConflicts(
+    plan.vacationDays,
+    plan.publicHolidays || [],
+    plan.companyHolidays || [],
+    usedDates
+  );
+  
+  const hasConflicts = conflictAnalysis.hasConflicts;
+  const companyConflictCount = conflictAnalysis.holidayConflicts.filter(c => c.type === 'company').length;
+  
   return (
-    <div className={`plan-card ${hasOverlaps ? 'has-overlaps' : ''}`}>
+    <div className={`plan-card ${hasOverlaps || hasConflicts ? 'has-warnings' : ''}`}>
       <div className="plan-card-header">
         <div className="plan-title-section">
           <h4>{plan.name}</h4>
-          {hasOverlaps && (
-            <span className="overlap-badge" title={`${overlapInfo.overlapCount} overlapping date(s) with other plans`}>
-              ⚠️ {overlapInfo.overlapCount} overlap{overlapInfo.overlapCount !== 1 ? 's' : ''}
+          {(hasOverlaps || hasConflicts) && (
+            <span className="overlap-badge" title={
+              hasConflicts 
+                ? `${conflictAnalysis.holidayConflicts.length} selected day(s) coincide with holidays`
+                : `${overlapInfo.overlapCount} overlapping date(s) with other plans`
+            }>
+              {hasConflicts
+                ? `${conflictAnalysis.holidayConflicts.length} holiday overlap${conflictAnalysis.holidayConflicts.length !== 1 ? 's' : ''}`
+                : `${overlapInfo.overlapCount} overlap${overlapInfo.overlapCount !== 1 ? 's' : ''}`}
             </span>
           )}
         </div>
@@ -66,10 +96,28 @@ export const PlanCard = ({
           <span className="detail-value">{plan.vacationDays.length}</span>
         </div>
       </div>
+      {hasConflicts && (
+        <div className="holiday-conflict-warning">
+          <div className="conflict-warning-header">
+            <span className="conflict-text">
+              {conflictAnalysis.holidayConflicts.length} selected day{conflictAnalysis.holidayConflicts.length !== 1 ? 's' : ''} coincide{conflictAnalysis.holidayConflicts.length === 1 ? 's' : ''} with {companyConflictCount > 0 ? 'company ' : ''}holiday{conflictAnalysis.holidayConflicts.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {conflictAnalysis.alternativeDates.length > 0 && (
+            <div className="conflict-alternatives">
+              <span className="alternatives-hint">Nearby options:</span>
+              {conflictAnalysis.alternativeDates.slice(0, 2).map(altDate => (
+                <span key={altDate} className="alternative-date-compact">
+                  {formatDateDisplay(altDate)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {hasOverlaps && (
         <div className="overlap-warning">
           <div className="overlap-warning-header">
-            <span className="overlap-icon">⚠️</span>
             <span className="overlap-text">
               This plan shares {overlapInfo.overlapCount} date{overlapInfo.overlapCount !== 1 ? 's' : ''} with:
             </span>

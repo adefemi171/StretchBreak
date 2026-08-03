@@ -17,6 +17,25 @@
   margin: 0 0 1rem;
 }
 
+.pto-year-badge {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.pto-scope-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pto-scope-hint.year-specific {
+  color: var(--accent);
+}
+
+.pto-scope-hint.global-fallback {
+  color: var(--muted);
+}
+
 .pto-input-field {
   width: 100%;
   max-width: 280px;
@@ -73,4 +92,62 @@
 
 .pto-stat-value.pto-zero {
   color: var(--danger);
+}
+
+.pto-carryover-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.pto-carryover-label {
+  margin-top: 0;
+}
+
+.pto-carryover-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 580px;
+}
+
+.pto-carryover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pto-field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pto-carryover-input,
+.pto-expiry-select {
+  max-width: none;
+}
+
+.pto-expiry-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pto-effective-display {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.pto-effective-text {
+  font-size: 0.95rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.pto-effective-total {
+  color: var(--accent);
+  font-weight: 700;
 }

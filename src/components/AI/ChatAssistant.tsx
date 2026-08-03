@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { isPast, parseISO, startOfDay, isSameDay } from 'date-fns';
 import { chatWithAssistant } from '../../services/aiService';
 import type { PublicHoliday, UserPreferences, ChatMessage } from '../../utils/types';
 import './ChatAssistant.css';
@@ -6,6 +7,7 @@ import './ChatAssistant.css';
 interface ChatAssistantProps {
   holidays: PublicHoliday[];
   year: number;
+  countryCode?: string;
   currentPlan?: { vacationDays: string[] };
   preferences?: UserPreferences;
 }
@@ -13,14 +15,25 @@ interface ChatAssistantProps {
 export const ChatAssistant = ({
   holidays,
   year,
+  countryCode,
   currentPlan,
   preferences,
 }: ChatAssistantProps) => {
+  const upcomingHolidays = useMemo(() => {
+    const today = startOfDay(new Date());
+    return holidays
+      .filter((holiday) => {
+        const holidayDate = startOfDay(parseISO(holiday.date));
+        return !isPast(holidayDate) || isSameDay(holidayDate, today);
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [holidays]);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I can help you plan your holidays. Ask me anything about vacation planning, optimal dates, or efficiency strategies.',
+      content: 'Hello! I can help you plan upcoming holidays. Ask about remaining PTO, bridge days later this year, or efficiency strategies — I’ll only suggest dates from today onward.',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -53,8 +66,9 @@ export const ChatAssistant = ({
 
     try {
       const response = await chatWithAssistant(input, {
-        holidays,
+        holidays: upcomingHolidays,
         year,
+        countryCode,
         currentPlan,
         preferences,
         conversationHistory: messages,

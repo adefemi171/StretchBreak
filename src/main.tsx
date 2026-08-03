@@ -16,3 +16,19 @@ createRoot(rootElement).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Register service worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        setInterval(() => {
+          registration.update();
+        }, 60000);
+      })
+      .catch(() => {
+        // SW registration failed — app still works online
+      });
+  });
+}

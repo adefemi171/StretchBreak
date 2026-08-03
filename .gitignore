@@ -26,6 +26,8 @@ dist-ssr
 .env
 node_modules
 .netlify
+roadmap.md
+deno.lock
 
 # Compiled JavaScript files (TypeScript project)
 src/**/*.js

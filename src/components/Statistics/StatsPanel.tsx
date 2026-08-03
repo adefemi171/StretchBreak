@@ -6,12 +6,14 @@ interface StatsPanelProps {
   vacationDays: string[];
   holidays: PublicHoliday[];
   availablePTODays?: number;
+  onViewInsights?: () => void;
 }
 
 export const StatsPanel = ({
   vacationDays,
   holidays,
   availablePTODays,
+  onViewInsights,
 }: StatsPanelProps) => {
   const stats = calculateEfficiency(vacationDays, holidays);
   const efficiency =
@@ -25,8 +27,8 @@ export const StatsPanel = ({
   return (
     <section className="stats-panel" aria-label="Plan statistics">
       <div className="stats-header">
-        <h3>Your stretch</h3>
-        <p className="stats-subtitle">How far your PTO goes with holidays and weekends</p>
+        <h3>Current selection</h3>
+        <p className="stats-subtitle">PTO, days off, and efficiency for the days you've selected</p>
       </div>
       <div className="stats-grid">
         <div className="stat-card">
@@ -55,6 +57,17 @@ export const StatsPanel = ({
           </div>
         )}
       </div>
+      {onViewInsights && (
+        <div className="stats-insights-link">
+          <button
+            type="button"
+            className="insights-link-button"
+            onClick={onViewInsights}
+          >
+            View multi-plan analytics →
+          </button>
+        </div>
+      )}
     </section>
   );
 };

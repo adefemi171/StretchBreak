@@ -1,0 +1,55 @@
+.offline-indicator {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  
+  padding: 12px 20px;
+  background: var(--warn-soft);
+  border-top: 1px solid var(--warn);
+  color: var(--ink);
+  
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.4;
+  
+  animation: slideUp 0.3s var(--ease-out);
+  box-shadow: 0 -4px 12px rgba(20, 36, 40, 0.08);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.offline-indicator-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.offline-indicator-text {
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .offline-indicator {
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+  
+  .offline-indicator-icon {
+    font-size: 16px;
+  }
+}

@@ -54,7 +54,12 @@
 
 .plan-card.has-overlaps {
   border-color: rgba(184, 134, 11, 0.45);
-  background: #fffdf6;
+  background: var(--surface-soft);
+}
+
+.plan-card.has-warnings {
+  border-color: rgba(184, 134, 11, 0.45);
+  background: var(--surface-soft);
 }
 
 .plan-actions {
@@ -74,7 +79,7 @@
   font-weight: 600;
   transition: all 0.2s var(--ease-out);
   white-space: nowrap;
-  background: white;
+  background: var(--surface-raised);
   color: var(--ink-soft);
 }
 
@@ -157,6 +162,58 @@
   font-size: 0.85rem;
 }
 
+.holiday-conflict-warning {
+  margin: 0.85rem 0;
+  padding: 0.7rem;
+  background: var(--warn-soft);
+  border: 1px solid rgba(184, 134, 11, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.conflict-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+.conflict-icon {
+  display: none;
+}
+
+.conflict-text {
+  font-size: 0.85rem;
+}
+
+.conflict-alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(184, 134, 11, 0.25);
+}
+
+.alternatives-hint {
+  font-size: 0.75rem;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.alternative-date-compact {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--surface-raised);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .overlap-warning-header {
   display: flex;
   align-items: center;
@@ -180,7 +237,7 @@
 .overlap-plan-name {
   display: inline-block;
   padding: 0.2rem 0.5rem;
-  background: white;
+  background: var(--surface-raised);
   border: 1px solid rgba(184, 134, 11, 0.35);
   border-radius: 999px;
   font-size: 0.75rem;

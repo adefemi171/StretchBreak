@@ -20,6 +20,91 @@
   border-radius: var(--radius-md);
 }
 
+.breakdown-holiday-warning {
+  margin-bottom: 1.25rem;
+  padding: 0.95rem;
+  background: var(--warn-soft);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: var(--radius-md);
+}
+
+.breakdown-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+  font-weight: 700;
+  color: var(--warn);
+  font-size: 0.9rem;
+}
+
+.breakdown-warning-icon {
+  display: none;
+}
+
+.breakdown-warning-text {
+  color: var(--warn);
+}
+
+.breakdown-conflict-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.8rem;
+}
+
+.breakdown-conflict-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  background: var(--surface-raised);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  border: 1px solid rgba(184, 134, 11, 0.25);
+}
+
+.conflict-date {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.conflict-name {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.breakdown-alternatives {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(184, 134, 11, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.alternatives-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--warn);
+}
+
+.alternatives-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.alternative-date {
+  display: inline-block;
+  padding: 0.3rem 0.65rem;
+  background: var(--surface-raised);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
 .breakdown-overlap-header {
   display: flex;
   align-items: center;
@@ -39,7 +124,7 @@
   flex-direction: column;
   gap: 0.45rem;
   font-size: 0.85rem;
-  color: #7a5a0a;
+  color: var(--warn);
 }
 
 .breakdown-overlap-label {
@@ -55,7 +140,7 @@
 .breakdown-overlap-plan-name {
   display: inline-block;
   padding: 0.2rem 0.5rem;
-  background: white;
+  background: var(--surface-raised);
   border: 1px solid rgba(184, 134, 11, 0.35);
   border-radius: 999px;
   font-weight: 600;
@@ -145,7 +230,7 @@
 
 .date-item {
   padding: 0.5rem 0.65rem;
-  background: white;
+  background: var(--surface-raised);
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--border-strong);
   font-size: 0.85rem;

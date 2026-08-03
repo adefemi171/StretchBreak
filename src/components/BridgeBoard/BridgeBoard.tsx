@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { parseISO, isPast, startOfDay, isSameDay } from 'date-fns';
 import { findOptimalVacationPeriods } from '../../utils/planningAlgorithm';
 import { formatDateDisplay } from '../../utils/dateUtils';
-import type { PublicHoliday, PlanSuggestion } from '../../utils/types';
+import type { PublicHoliday, PlanSuggestion, SuggestionFilters } from '../../utils/types';
+import { applySuggestionFilters, getEmptyFilters } from '../../utils/suggestionFilters';
+import { SuggestionFilters as SuggestionFiltersUI } from '../SuggestionFilters/SuggestionFilters';
 import './BridgeBoard.css';
 
 interface BridgeBoardProps {
@@ -20,23 +22,23 @@ export const BridgeBoard = ({
   loading = false,
   onUseBridge,
 }: BridgeBoardProps) => {
+  const [filters, setFilters] = useState<SuggestionFilters>(getEmptyFilters());
+
   const bridges = useMemo(() => {
     if (holidays.length === 0) return [];
 
     const today = startOfDay(new Date());
     const suggestions = findOptimalVacationPeriods(holidays, year);
 
-    return suggestions
-      .filter((s) => {
-        const start = parseISO(s.startDate);
-        return !isPast(start) || isSameDay(start, today);
-      })
-      .sort((a, b) => {
-        if (b.efficiency !== a.efficiency) return b.efficiency - a.efficiency;
-        return a.startDate.localeCompare(b.startDate);
-      })
-      .slice(0, 6);
-  }, [holidays, year]);
+    const futureOrToday = suggestions.filter((s) => {
+      const start = parseISO(s.startDate);
+      return !isPast(start) || isSameDay(start, today);
+    });
+
+    const filtered = applySuggestionFilters(futureOrToday, filters);
+
+    return filtered.slice(0, 6);
+  }, [holidays, year, filters]);
 
   if (loading) {
     return (
@@ -61,6 +63,8 @@ export const BridgeBoard = ({
           </p>
         </div>
       </div>
+
+      <SuggestionFiltersUI filters={filters} onChange={setFilters} />
 
       <div className="bridge-grid">
         {bridges.map((bridge) => (

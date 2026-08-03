@@ -1,47 +1,46 @@
 import { OpenAI } from 'openai';
+import {
+  guardAIRequest,
+  jsonResponse,
+  recordUsage,
+  sanitizeUserText,
+  PROMPT_HARDENING,
+} from './_shared/aiGuard.js';
+
+const MODEL = 'gpt-4o';
 
 export const handler = async (event) => {
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-      body: '',
-    };
-  }
+  const blocked = await guardAIRequest(event);
+  if (blocked) return blocked;
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
+  const { body, cors } = event._aiGuard;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'OpenAI API key not configured' }),
-    };
+    return jsonResponse(500, { error: 'OpenAI API key not configured' }, cors);
   }
 
   try {
-    const { plan, startDate, endDate, options } = JSON.parse(event.body);
+    const plan = body.plan || {};
+    const startDate = sanitizeUserText(String(body.startDate || ''), 32);
+    const endDate = sanitizeUserText(String(body.endDate || ''), 32);
+    const options = body.options || {};
 
-    const openai = new OpenAI({
-      apiKey,
-    });
+    if (!startDate || !endDate) {
+      return jsonResponse(400, { error: 'startDate and endDate are required' }, cors);
+    }
 
-    const { includeDates = true, includeBackDate = true, tone = 'professional' } = options || {};
+    const openai = new OpenAI({ apiKey });
 
-    const vacationDays = plan.vacationDays || [];
-    const totalDays = vacationDays.length;
+    const includeDates = options.includeDates !== false;
+    const includeBackDate = options.includeBackDate !== false;
+    const tone = ['professional', 'casual', 'brief'].includes(options.tone)
+      ? options.tone
+      : 'professional';
 
     const backDate = new Date(endDate);
+    if (Number.isNaN(backDate.getTime())) {
+      return jsonResponse(400, { error: 'Invalid endDate' }, cors);
+    }
     backDate.setDate(backDate.getDate() + 1);
     const backDateStr = backDate.toISOString().split('T')[0];
 
@@ -53,7 +52,7 @@ export const handler = async (event) => {
       professional: 'professional and formal',
       casual: 'friendly and casual',
       brief: 'concise and brief',
-    }[tone] || 'professional';
+    }[tone];
 
     const requirements = [];
     if (tone === 'brief') {
@@ -62,7 +61,7 @@ export const handler = async (event) => {
       requirements.push('- Use formal business language');
       requirements.push('- Mention limited email access');
       requirements.push('- Include professional closing');
-    } else if (tone === 'casual') {
+    } else {
       requirements.push('- Use friendly, conversational language');
       requirements.push('- Keep it warm and approachable');
     }
@@ -73,13 +72,18 @@ export const handler = async (event) => {
     requirements.push('- Do NOT include email signatures or subject lines');
     requirements.push('- Return ONLY the message body text');
 
+    const planName = sanitizeUserText(String(plan.name || 'Vacation'), 120);
+    const planDescription = plan.description
+      ? sanitizeUserText(String(plan.description), 300)
+      : '';
+
     const prompt = `Generate an out-of-office email message with the following requirements:
 
 - Tone: ${toneDescription}
 - Date range: ${dateRange}
 ${includeBackDate ? `- Return date: ${new Date(backDateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
-- Plan name: ${plan.name || 'Vacation'}
-${plan.description ? `- Description: ${plan.description}` : ''}
+- Plan name: ${planName}
+${planDescription ? `- Description: ${planDescription}` : ''}
 
 Requirements:
 ${requirements.join('\n')}
@@ -87,11 +91,11 @@ ${requirements.join('\n')}
 Generate the message:`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: MODEL,
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant that generates professional out-of-office email messages. Return only the message body text, no subject lines or signatures.',
+          content: `${PROMPT_HARDENING} Generate only professional out-of-office email message bodies. Return only the message body text, no subject lines or signatures.`,
         },
         {
           role: 'user',
@@ -102,27 +106,18 @@ Generate the message:`;
       max_tokens: 200,
     });
 
-    const message = completion.choices[0]?.message?.content?.trim() || '';
+    const usage = completion.usage || {};
+    await recordUsage({
+      model: MODEL,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+    });
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
-      body: JSON.stringify({ message }),
-    };
+    const message =
+      sanitizeUserText(completion.choices[0]?.message?.content?.trim() || '', 2000) || '';
+
+    return jsonResponse(200, { message }, cors);
   } catch (error) {
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ error: error.message || 'Internal server error' }),
-    };
+    return jsonResponse(500, { error: error.message || 'Internal server error' }, cors);
   }
 };
-

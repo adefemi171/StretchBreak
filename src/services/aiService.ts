@@ -97,7 +97,11 @@ export const generateAISuggestions = async (
     }
 
     const data = await response.json();
-    return data.suggestions as PlanSuggestion[];
+    // Support both { suggestions: [...] } and legacy raw arrays
+    if (Array.isArray(data)) {
+      return data as PlanSuggestion[];
+    }
+    return (data.suggestions || []) as PlanSuggestion[];
   } catch (error) {
     if (isNetworkFailure(error)) {
       availabilityCache = false;
@@ -112,6 +116,7 @@ export const chatWithAssistant = async (
   context: {
     holidays: PublicHoliday[];
     year: number;
+    countryCode?: string;
     currentPlan?: { vacationDays: string[] };
     preferences?: UserPreferences;
     conversationHistory?: ChatMessage[];
@@ -134,6 +139,7 @@ export const chatWithAssistant = async (
         message,
         holidays: context.holidays,
         year: context.year,
+        countryCode: context.countryCode,
         currentPlan: context.currentPlan,
         preferences: context.preferences,
         conversationHistory: context.conversationHistory,

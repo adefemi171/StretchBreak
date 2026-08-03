@@ -1,0 +1,101 @@
+.public-calendar {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.public-calendar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.public-calendar h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.public-calendar-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 40rem;
+}
+
+.public-calendar-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.public-calendar-switch input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+}
+
+.public-calendar-body {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.public-calendar-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.public-calendar-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  min-width: 5.5rem;
+}
+
+.public-calendar-month {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.public-calendar-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.public-calendar-copy {
+  align-self: flex-start;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.public-calendar-copy:hover {
+  background: var(--accent-hover);
+}
+
+.public-calendar-copy:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

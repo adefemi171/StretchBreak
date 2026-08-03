@@ -38,17 +38,19 @@ npm install
 3. (Optional) Set up OpenAI API key for AI features:
    
    **For Local Development:**
-   - Install Netlify CLI: `npm install -g netlify-cli`
-   - Run `netlify dev` instead of `npm run dev` to start the development server with functions
-   - Set environment variable: `netlify env:set OPENAI_API_KEY your_api_key_here`
+   - Copy `.env.example` to `.env`
+   - Set `OPENAI_API_KEY` (server-side only — never use a `VITE_` prefix for secrets)
+   - Optionally set `AI_MONTHLY_COST_LIMIT_USD` (default `10`)
+   - Install Netlify CLI / use `npm run dev:full` so functions load with env vars
    
    **For Production (Netlify):**
    - Go to your Netlify site dashboard
    - Navigate to Site settings → Environment variables
    - Add `OPENAI_API_KEY` with your OpenAI API key value
+   - Optionally add `AI_MONTHLY_COST_LIMIT_USD` (default $10/month) and `ALLOWED_ORIGINS`
    - Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
    
-   **Note:** The API key is now stored server-side in Netlify Functions, so it won't be exposed in the browser.
+   **Note:** The API key is stored server-side in Netlify Functions only. AI endpoints are rate-limited, CORS-restricted, and capped by monthly spend.
 
 4. Start the development server:
 
