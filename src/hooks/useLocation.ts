@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { detectUserCountry } from '../services/locationService';
+import { detectUserCountry, type DetectCountryOptions } from '../services/locationService';
 
 export const useLocation = () => {
   const [detectedCountry, setDetectedCountry] = useState<string | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const detectLocation = async () => {
+
+  const detectLocation = async (options: DetectCountryOptions = {}) => {
     setIsDetecting(true);
     setError(null);
-    
+
     try {
-      const country = await detectUserCountry();
+      const country = await detectUserCountry(options);
       setDetectedCountry(country);
-      
+
       if (!country) {
         setError('Could not detect your location');
       }
@@ -24,7 +24,7 @@ export const useLocation = () => {
       setIsDetecting(false);
     }
   };
-  
+
   return {
     detectedCountry,
     isDetecting,
@@ -32,4 +32,3 @@ export const useLocation = () => {
     detectLocation,
   };
 };
-

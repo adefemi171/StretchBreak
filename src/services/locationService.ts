@@ -1,110 +1,103 @@
 /**
+ * Country detection via third-party IP geolocation.
+ * Only call after an explicit user action — IP is sent to these providers.
+ */
+
+export type DetectCountryOptions = {
+  /** Browser geolocation requires a second permission prompt; off by default. */
+  allowGeolocation?: boolean;
+};
+
+/**
  * Get user's country code based on their IP address.
- * Uses third-party geolocation APIs (ipapi.co, ip-api.com, ipgeolocation.io).
- * Your IP may be sent to those providers when auto-detect is used.
+ * Uses third-party geolocation APIs (ipapi.co, ip-api.com, ipgeolocation.io, ipwho.is).
  */
 export const detectCountryFromIP = async (): Promise<string | null> => {
-  // Try multiple services in order until one works
   const services = [
-    // Service 1: ipapi.co (with CORS proxy if needed)
     async () => {
       try {
-        // Try direct first
         const response = await fetch('https://ipapi.co/json/', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
+          headers: { Accept: 'application/json' },
         });
         if (response.ok) {
           const data = await response.json();
           if (data.country_code) {
-            return data.country_code.toUpperCase();
+            return String(data.country_code).toUpperCase();
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore and try next service
       }
       return null;
     },
-    
-    // Service 2: ip-api.com (free tier, supports CORS)
+
     async () => {
       try {
         const response = await fetch('https://ip-api.com/json/?fields=status,countryCode', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
+          headers: { Accept: 'application/json' },
         });
         if (response.ok) {
           const data = await response.json();
           if (data.status === 'success' && data.countryCode) {
-            return data.countryCode.toUpperCase();
+            return String(data.countryCode).toUpperCase();
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore and try next service
       }
       return null;
     },
-    
-    // Service 3: ipgeolocation.io (free tier, CORS enabled)
+
     async () => {
       try {
         const response = await fetch('https://api.ipgeolocation.io/ipgeo?apiKey=free', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
+          headers: { Accept: 'application/json' },
         });
         if (response.ok) {
           const data = await response.json();
           if (data.country_code2) {
-            return data.country_code2.toUpperCase();
+            return String(data.country_code2).toUpperCase();
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore and try next service
       }
       return null;
     },
-    
-    // Service 4: ipwho.is (free, CORS enabled)
+
     async () => {
       try {
         const response = await fetch('https://ipwho.is/', {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
+          headers: { Accept: 'application/json' },
         });
         if (response.ok) {
           const data = await response.json();
           if (data.country_code) {
-            return data.country_code.toUpperCase();
+            return String(data.country_code).toUpperCase();
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore
       }
       return null;
     },
   ];
-  
-  // Try each service sequentially
+
   for (const service of services) {
     try {
       const country = await service();
-      if (country) {
+      if (country && /^[A-Z]{2}$/.test(country)) {
         return country;
       }
-    } catch (error) {
-      // Continue to next service
+    } catch {
       continue;
     }
   }
-  
+
   return null;
 };
 
@@ -119,67 +112,61 @@ export const detectCountryFromGeolocation = async (): Promise<string | null> => 
       resolve(null);
       return;
     }
-    
-    // Set a timeout to avoid hanging
+
     const timeoutId = setTimeout(() => {
       resolve(null);
     }, 8000);
-    
+
     try {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           clearTimeout(timeoutId);
           try {
             const { latitude, longitude } = position.coords;
-            
-            // Use reverse geocoding to get country from coordinates
-            // Try multiple services
+
             const services = [
               `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
               `https://geocode.xyz/${latitude},${longitude}?json=1&geoit=json`,
             ];
-            
+
             for (const url of services) {
               try {
                 const response = await fetch(url, {
                   method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                  },
+                  headers: { Accept: 'application/json' },
                 });
-                
+
                 if (response.ok) {
                   const data = await response.json();
                   if (data.countryCode || data.prov) {
-                    const countryCode = (data.countryCode || data.prov)?.toUpperCase();
-                    if (countryCode && countryCode.length === 2) {
+                    const countryCode = String(data.countryCode || data.prov).toUpperCase();
+                    if (/^[A-Z]{2}$/.test(countryCode)) {
                       resolve(countryCode);
                       return;
                     }
                   }
                 }
-              } catch (e) {
-                // Try next service
+              } catch {
                 continue;
               }
             }
-            
+
             resolve(null);
-          } catch (error) {
+          } catch {
             resolve(null);
           }
         },
-        (error) => {
+        () => {
           clearTimeout(timeoutId);
           resolve(null);
         },
         {
           timeout: 7000,
           enableHighAccuracy: false,
-          maximumAge: 300000, // Cache for 5 minutes
+          maximumAge: 300000,
         }
       );
-    } catch (error) {
+    } catch {
       clearTimeout(timeoutId);
       resolve(null);
     }
@@ -187,22 +174,20 @@ export const detectCountryFromGeolocation = async (): Promise<string | null> => 
 };
 
 /**
- * Detect user's country using the best available method
- * Tries IP-based detection first (faster, no permission), then geolocation if needed
+ * Detect user's country. Defaults to IP-only (no browser permission prompt).
+ * Pass allowGeolocation: true only after the user opts in.
  */
-export const detectUserCountry = async (): Promise<string | null> => {
-  // Try IP-based detection first (faster, no permission needed)
+export const detectUserCountry = async (
+  options: DetectCountryOptions = {}
+): Promise<string | null> => {
   const ipCountry = await detectCountryFromIP();
   if (ipCountry) {
     return ipCountry;
   }
-  
-  // Fallback to geolocation (more accurate, but requires permission and is slower)
-  const geoCountry = await detectCountryFromGeolocation();
-  if (geoCountry) {
-    return geoCountry;
+
+  if (options.allowGeolocation) {
+    return detectCountryFromGeolocation();
   }
-  
+
   return null;
 };
-

@@ -48,7 +48,7 @@ function App() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<HolidayPlan | null>(null);
   const [activeTab, setActiveTab] = useState<'planner' | 'plans' | 'insights' | 'chat' | 'settings' | 'team'>('planner');
-  const [shouldApplyAutoDetect, setShouldApplyAutoDetect] = useState(true);
+  const [shouldApplyAutoDetect, setShouldApplyAutoDetect] = useState(false);
   const [showMultiYearView, setShowMultiYearView] = useState(false);
   const plannerViewRef = useRef<HTMLDivElement>(null);
   
@@ -145,7 +145,7 @@ function App() {
   const { contrast, setContrast, fontScale, setFontScale } = useAccessibility();
   
   useEffect(() => {
-    detectLocation();
+    // Country detection is opt-in (toolbar button) — do not phone home on load.
     checkRemindersOnLoad();
   }, []);
   
@@ -641,13 +641,19 @@ function App() {
             <CountrySelector value={countryCode} onChange={handleCountryChange} />
             <button
               onClick={async () => {
+                const ok = window.confirm(
+                  'Detect country from your IP address?\n\n' +
+                    'Your IP will be sent to a third-party lookup service (ipapi / ip-api / similar). ' +
+                    'Cancel to keep your saved or manually selected country.'
+                );
+                if (!ok) return;
                 setShouldApplyAutoDetect(true);
-                await detectLocation();
+                await detectLocation({ allowGeolocation: false });
               }}
               disabled={isDetecting}
               className="refresh-location-button"
-              title="Detect country via IP/geolocation (uses third-party lookup services)"
-              aria-label="Detect country from location"
+              title="Opt-in: detect country via IP (third-party lookup)"
+              aria-label="Detect country from IP address"
             >
               {isDetecting ? '…' : '↻'}
             </button>

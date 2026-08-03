@@ -1,11 +1,12 @@
 /**
  * Shared guards for AI Netlify functions:
- * CORS, rate limiting, monthly cost cap, input sanitization.
+ * CORS, rate limiting, monthly cost cap (with spend reservation), input sanitization.
  */
 
 const DEFAULT_MONTHLY_COST_LIMIT_USD = 10;
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 20;
+const RATE_LIMIT_MAX = 10;
+const DAILY_RATE_LIMIT_MAX = 60;
 const MAX_BODY_BYTES = 64_000;
 const MAX_MESSAGE_CHARS = 2_000;
 const MAX_HISTORY_MESSAGES = 6;
@@ -17,15 +18,24 @@ const MODEL_PRICING = {
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
 };
 
+/** Worst-case USD reserved before calling OpenAI (prevents concurrent overspend). */
+const RESERVATION_USD = {
+  'gpt-3.5-turbo': 0.02,
+  'gpt-4o': 0.05,
+  'gpt-4o-mini': 0.01,
+};
+
 /** In-memory fallback when Blobs is unavailable (e.g. some local setups). */
 const memoryUsageByMonth = new Map();
 const rateLimitBuckets = new Map();
+const dailyRateLimitBuckets = new Map();
 
 export {
   DEFAULT_MONTHLY_COST_LIMIT_USD,
   MAX_BODY_BYTES,
   MAX_MESSAGE_CHARS,
   MAX_HISTORY_MESSAGES,
+  RESERVATION_USD,
 };
 
 export function getMonthlyCostLimitUsd() {
@@ -76,14 +86,14 @@ export function getCorsHeaders(event) {
     'Access-Control-Allow-Origin': allowOrigin || 'null',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Vary': 'Origin',
+    Vary: 'Origin',
   };
 }
 
 export function isOriginAllowed(event) {
   const origin = event.headers?.origin || event.headers?.Origin;
-  // Same-origin / non-browser callers may omit Origin
-  if (!origin) return true;
+  // Require Origin so non-browser clients cannot bypass the allowlist
+  if (!origin) return false;
   return getAllowedOrigins().has(origin);
 }
 
@@ -98,25 +108,51 @@ export function jsonResponse(statusCode, body, extraHeaders = {}) {
   };
 }
 
+/** Stable client-facing errors; log details server-side only. */
+export function safeErrorResponse(statusCode, cors, publicMessage = 'Something went wrong. Please try again.') {
+  return jsonResponse(statusCode, { error: publicMessage }, cors);
+}
+
+export function logServerError(context, error) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[aiGuard:${context}]`, message);
+}
+
 function getClientIp(event) {
   const forwarded = event.headers?.['x-forwarded-for'] || event.headers?.['X-Forwarded-For'] || '';
   if (forwarded) return forwarded.split(',')[0].trim();
   return event.headers?.['client-ip'] || event.headers?.['x-nf-client-connection-ip'] || 'unknown';
 }
 
-function checkRateLimit(ip) {
+function checkWindowRateLimit(map, key, windowMs, max) {
   const now = Date.now();
-  let bucket = rateLimitBuckets.get(ip);
-  if (!bucket || now - bucket.windowStart >= RATE_LIMIT_WINDOW_MS) {
+  let bucket = map.get(key);
+  if (!bucket || now - bucket.windowStart >= windowMs) {
     bucket = { windowStart: now, count: 0 };
-    rateLimitBuckets.set(ip, bucket);
+    map.set(key, bucket);
   }
   bucket.count += 1;
-  return bucket.count <= RATE_LIMIT_MAX;
+  return bucket.count <= max;
+}
+
+function checkRateLimit(ip) {
+  const minuteOk = checkWindowRateLimit(rateLimitBuckets, ip, RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
+  if (!minuteOk) return false;
+  const dayKey = `${ip}:${new Date().toISOString().slice(0, 10)}`;
+  return checkWindowRateLimit(dailyRateLimitBuckets, dayKey, 86_400_000, DAILY_RATE_LIMIT_MAX);
 }
 
 function monthKey(date = new Date()) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function normalizeUsage(data) {
+  return {
+    spentUsd: typeof data?.spentUsd === 'number' ? data.spentUsd : 0,
+    reservedUsd: typeof data?.reservedUsd === 'number' ? data.reservedUsd : 0,
+    requestCount: typeof data?.requestCount === 'number' ? data.requestCount : 0,
+    updatedAt: data?.updatedAt || new Date().toISOString(),
+  };
 }
 
 async function getUsageStore() {
@@ -128,47 +164,121 @@ async function getUsageStore() {
   }
 }
 
-async function readMonthlySpendUsd() {
+async function mutateUsage(mutator, { retries = 6 } = {}) {
+  const key = monthKey();
+  const store = await getUsageStore();
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    if (store) {
+      try {
+        const result = await store.getWithMetadata(key, { type: 'json', consistency: 'strong' });
+        const current = normalizeUsage(result?.data);
+        const etag = result?.etag;
+        const nextOrNull = mutator(current);
+        if (!nextOrNull) {
+          return { ok: false, usage: current };
+        }
+        const next = { ...normalizeUsage(nextOrNull), updatedAt: new Date().toISOString() };
+        const options = etag ? { onlyIfMatch: etag } : { onlyIfNew: true };
+        const write = await store.setJSON(key, next, options);
+        if (!write?.modified) {
+          continue;
+        }
+        memoryUsageByMonth.set(key, next);
+        return { ok: true, usage: next };
+      } catch {
+        // fall through to memory for this attempt
+      }
+    }
+
+    const current = normalizeUsage(memoryUsageByMonth.get(key));
+    const nextOrNull = mutator(current);
+    if (!nextOrNull) {
+      return { ok: false, usage: current };
+    }
+    const next = { ...normalizeUsage(nextOrNull), updatedAt: new Date().toISOString() };
+    memoryUsageByMonth.set(key, next);
+    return { ok: true, usage: next };
+  }
+
+  return { ok: false, usage: normalizeUsage(memoryUsageByMonth.get(key)) };
+}
+
+export async function readMonthlySpendUsd() {
   const key = monthKey();
   const store = await getUsageStore();
   if (store) {
     try {
       const data = await store.get(key, { type: 'json' });
-      if (data && typeof data.spentUsd === 'number') return data.spentUsd;
-    } catch {
-      // fall through to memory
-    }
-  }
-  return memoryUsageByMonth.get(key) || 0;
-}
-
-export async function recordUsage({ model, promptTokens = 0, completionTokens = 0 }) {
-  const cost = estimateCostUsd(model, promptTokens, completionTokens);
-  if (cost <= 0) return cost;
-
-  const key = monthKey();
-  const store = await getUsageStore();
-  let spent = memoryUsageByMonth.get(key) || 0;
-
-  if (store) {
-    try {
-      const existing = await store.get(key, { type: 'json' });
-      spent = typeof existing?.spentUsd === 'number' ? existing.spentUsd : 0;
-      const next = {
-        spentUsd: spent + cost,
-        requestCount: (existing?.requestCount || 0) + 1,
-        updatedAt: new Date().toISOString(),
-      };
-      await store.setJSON(key, next);
-      memoryUsageByMonth.set(key, next.spentUsd);
-      return cost;
+      const usage = normalizeUsage(data);
+      memoryUsageByMonth.set(key, usage);
+      return usage.spentUsd + usage.reservedUsd;
     } catch {
       // fall through
     }
   }
+  const usage = normalizeUsage(memoryUsageByMonth.get(key));
+  return usage.spentUsd + usage.reservedUsd;
+}
 
-  spent += cost;
-  memoryUsageByMonth.set(key, spent);
+export function reservationForModel(model) {
+  return RESERVATION_USD[model] || RESERVATION_USD['gpt-3.5-turbo'];
+}
+
+/**
+ * Atomically reserve worst-case spend before calling OpenAI.
+ * Returns { ok, reservedUsd, spentUsd, limitUsd }.
+ */
+export async function reserveSpend(model) {
+  const limit = getMonthlyCostLimitUsd();
+  const reservedUsd = reservationForModel(model);
+  const result = await mutateUsage((usage) => {
+    const committed = usage.spentUsd + usage.reservedUsd;
+    if (committed + reservedUsd > limit) return null;
+    return {
+      ...usage,
+      reservedUsd: usage.reservedUsd + reservedUsd,
+    };
+  });
+
+  return {
+    ok: result.ok,
+    reservedUsd,
+    spentUsd: result.usage.spentUsd,
+    limitUsd: limit,
+  };
+}
+
+/** Convert a reservation into actual spend after a successful OpenAI call. */
+export async function commitUsage({ model, promptTokens = 0, completionTokens = 0, reservedUsd = 0 }) {
+  const cost = estimateCostUsd(model, promptTokens, completionTokens);
+  const result = await mutateUsage((usage) => ({
+    ...usage,
+    spentUsd: usage.spentUsd + cost,
+    reservedUsd: Math.max(0, usage.reservedUsd - reservedUsd),
+    requestCount: usage.requestCount + 1,
+  }));
+  return { cost, ok: result.ok };
+}
+
+/** Release a reservation when the OpenAI call fails or is aborted. */
+export async function releaseReservation(reservedUsd = 0) {
+  if (reservedUsd <= 0) return;
+  await mutateUsage((usage) => ({
+    ...usage,
+    reservedUsd: Math.max(0, usage.reservedUsd - reservedUsd),
+  }));
+}
+
+/** @deprecated Prefer reserveSpend + commitUsage; kept for compatibility. */
+export async function recordUsage({ model, promptTokens = 0, completionTokens = 0 }) {
+  const cost = estimateCostUsd(model, promptTokens, completionTokens);
+  if (cost <= 0) return cost;
+  await mutateUsage((usage) => ({
+    ...usage,
+    spentUsd: usage.spentUsd + cost,
+    requestCount: usage.requestCount + 1,
+  }));
   return cost;
 }
 
@@ -246,20 +356,20 @@ export async function guardAIRequest(event, { allowPing = true } = {}) {
   }
 
   const limit = getMonthlyCostLimitUsd();
-  const spent = await readMonthlySpendUsd();
-  if (spent >= limit) {
+  const committed = await readMonthlySpendUsd();
+  if (committed >= limit) {
     return jsonResponse(
       429,
       {
         error: `Monthly AI cost limit of $${limit.toFixed(2)} reached. Try again next month or raise AI_MONTHLY_COST_LIMIT_USD.`,
         code: 'AI_COST_LIMIT',
-        spentUsd: Number(spent.toFixed(4)),
+        spentUsd: Number(committed.toFixed(4)),
         limitUsd: limit,
       },
       cors
     );
   }
 
-  event._aiGuard = { body, cors, spentUsd: spent, limitUsd: limit };
+  event._aiGuard = { body, cors, spentUsd: committed, limitUsd: limit };
   return null;
 }

@@ -2,9 +2,13 @@ import { OpenAI } from 'openai';
 import {
   guardAIRequest,
   jsonResponse,
-  recordUsage,
+  reserveSpend,
+  commitUsage,
+  releaseReservation,
   sanitizeUserText,
   PROMPT_HARDENING,
+  safeErrorResponse,
+  logServerError,
 } from './_shared/aiGuard.js';
 
 const MODEL = 'gpt-4o';
@@ -16,8 +20,10 @@ export const handler = async (event) => {
   const { body, cors } = event._aiGuard;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return jsonResponse(500, { error: 'OpenAI API key not configured' }, cors);
+    return jsonResponse(500, { error: 'AI is not configured' }, cors);
   }
+
+  let reservedUsd = 0;
 
   try {
     const plan = body.plan || {};
@@ -29,6 +35,25 @@ export const handler = async (event) => {
       return jsonResponse(400, { error: 'startDate and endDate are required' }, cors);
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return jsonResponse(400, { error: 'Invalid date format' }, cors);
+    }
+
+    const reservation = await reserveSpend(MODEL);
+    if (!reservation.ok) {
+      return jsonResponse(
+        429,
+        {
+          error: `Monthly AI cost limit of $${reservation.limitUsd.toFixed(2)} reached. Try again next month or raise AI_MONTHLY_COST_LIMIT_USD.`,
+          code: 'AI_COST_LIMIT',
+          spentUsd: Number(reservation.spentUsd.toFixed(4)),
+          limitUsd: reservation.limitUsd,
+        },
+        cors
+      );
+    }
+    reservedUsd = reservation.reservedUsd;
+
     const openai = new OpenAI({ apiKey });
 
     const includeDates = options.includeDates !== false;
@@ -39,6 +64,8 @@ export const handler = async (event) => {
 
     const backDate = new Date(endDate);
     if (Number.isNaN(backDate.getTime())) {
+      await releaseReservation(reservedUsd);
+      reservedUsd = 0;
       return jsonResponse(400, { error: 'Invalid endDate' }, cors);
     }
     backDate.setDate(backDate.getDate() + 1);
@@ -107,17 +134,21 @@ Generate the message:`;
     });
 
     const usage = completion.usage || {};
-    await recordUsage({
+    await commitUsage({
       model: MODEL,
       promptTokens: usage.prompt_tokens || 0,
       completionTokens: usage.completion_tokens || 0,
+      reservedUsd,
     });
+    reservedUsd = 0;
 
     const message =
       sanitizeUserText(completion.choices[0]?.message?.content?.trim() || '', 2000) || '';
 
     return jsonResponse(200, { message }, cors);
   } catch (error) {
-    return jsonResponse(500, { error: error.message || 'Internal server error' }, cors);
+    if (reservedUsd > 0) await releaseReservation(reservedUsd);
+    logServerError('generate-ooo-message', error);
+    return safeErrorResponse(500, cors);
   }
 };

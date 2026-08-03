@@ -1,4 +1,5 @@
 import type { HolidayPlan } from '../utils/types';
+import { isSafeIsoDate } from '../utils/importValidation';
 
 /** Escape text for ICS SUMMARY/DESCRIPTION (newlines, commas, semicolons, backslashes). */
 export const escapeIcsText = (value: string): string => {
@@ -11,6 +12,12 @@ export const escapeIcsText = (value: string): string => {
     .replace(/\r/g, '\\n');
 };
 
+/** Compact YYYYMMDD for ICS DATE values; rejects unsafe / injected strings. */
+export const toIcsDateValue = (value: string): string | null => {
+  if (!isSafeIsoDate(value)) return null;
+  return value.replace(/-/g, '');
+};
+
 export const generateICal = (plan: HolidayPlan): string => {
   const lines: string[] = [];
   
@@ -21,10 +28,12 @@ export const generateICal = (plan: HolidayPlan): string => {
   lines.push('METHOD:PUBLISH');
   
   plan.publicHolidays.forEach(holiday => {
+    const dateStr = toIcsDateValue(holiday.date);
+    if (!dateStr) return;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:holiday-${holiday.date}@stretchbreak`);
-    lines.push(`DTSTART;VALUE=DATE:${holiday.date.replace(/-/g, '')}`);
-    lines.push(`DTEND;VALUE=DATE:${holiday.date.replace(/-/g, '')}`);
+    lines.push(`UID:holiday-${dateStr}@stretchbreak`);
+    lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
+    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
     lines.push(`SUMMARY:${escapeIcsText(holiday.localName)}`);
     lines.push(`DESCRIPTION:${escapeIcsText(`Public Holiday - ${holiday.name}`)}`);
     lines.push('TRANSP:TRANSPARENT');
@@ -32,12 +41,13 @@ export const generateICal = (plan: HolidayPlan): string => {
   });
   
   plan.vacationDays.forEach((date, index) => {
-    const dateStr = date.replace(/-/g, '');
+    const dateStr = toIcsDateValue(date);
+    if (!dateStr) return;
     const description = plan.description
       ? `${plan.name} - ${plan.description}`
       : plan.name;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:vacation-${date}@stretchbreak`);
+    lines.push(`UID:vacation-${dateStr}@stretchbreak`);
     lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
     lines.push(`DTEND;VALUE=DATE:${dateStr}`);
     lines.push(`SUMMARY:${escapeIcsText(`Vacation Day ${index + 1}`)}`);
@@ -66,15 +76,16 @@ export const downloadICal = (plan: HolidayPlan): void => {
 
 // Generate Google Calendar deep link
 export const generateGoogleCalendarUrl = (plan: HolidayPlan): string => {
-  if (plan.vacationDays.length === 0) return '';
+  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
+  if (sortedDays.length === 0) return '';
   
-  const sortedDays = [...plan.vacationDays].sort();
   const firstDay = sortedDays[0];
   const lastDay = sortedDays[sortedDays.length - 1];
   
   // Format dates as YYYYMMDD for Google Calendar
-  const startDate = firstDay.replace(/-/g, '');
-  const endDate = lastDay.replace(/-/g, '');
+  const startDate = toIcsDateValue(firstDay);
+  const endDate = toIcsDateValue(lastDay);
+  if (!startDate || !endDate) return '';
   
   const title = encodeURIComponent(`${plan.name} - Vacation`);
   const details = encodeURIComponent(
@@ -88,9 +99,9 @@ export const generateGoogleCalendarUrl = (plan: HolidayPlan): string => {
 
 // Generate Outlook web deep link
 export const generateOutlookUrl = (plan: HolidayPlan): string => {
-  if (plan.vacationDays.length === 0) return '';
+  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
+  if (sortedDays.length === 0) return '';
   
-  const sortedDays = [...plan.vacationDays].sort();
   const firstDay = sortedDays[0];
   const lastDay = sortedDays[sortedDays.length - 1];
   
@@ -107,9 +118,9 @@ export const generateOutlookUrl = (plan: HolidayPlan): string => {
 
 // Generate Slack/Teams formatted message
 export const generateSlackMessage = (plan: HolidayPlan): string => {
-  if (plan.vacationDays.length === 0) return '';
+  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
+  if (sortedDays.length === 0) return '';
   
-  const sortedDays = [...plan.vacationDays].sort();
   const firstDay = sortedDays[0];
   const lastDay = sortedDays[sortedDays.length - 1];
   

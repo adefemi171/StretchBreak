@@ -116,7 +116,7 @@ export const SettingsTab = ({
       const replace = confirm(
         `Restore ${keys.length} key(s): ${preview}\n\n` +
           'OK = Replace current StretchBreak data\nCancel = Merge with current data\n\n' +
-          'Unknown keys are ignored. Sync codes are not encrypted.'
+          'Unknown keys and webhook URLs are ignored. Sync codes are not encrypted.'
       );
 
       if (replace) {
@@ -368,7 +368,7 @@ export const SettingsTab = ({
                 <div>
                   <div className="settings-option-title">Download Backup</div>
                   <div className="settings-option-description">
-                    Local file backup only — not cloud sync. Exports recognized StretchBreak keys from this browser.
+                    Local file backup only — not cloud sync. Exports recognized StretchBreak keys (webhook URLs are never included).
                   </div>
                 </div>
               </div>

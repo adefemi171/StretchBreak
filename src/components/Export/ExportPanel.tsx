@@ -201,6 +201,7 @@ export const ExportPanel = ({ plan, currentSelectedDates }: ExportPanelProps) =>
             </div>
             <p className="webhook-hint">
               HTTPS Slack or Microsoft Teams incoming webhook only. Posts your vacation notice text to that URL — do not paste untrusted links.
+              Stored only on this device; never included in backups or sync codes.
             </p>
           </div>
         )}

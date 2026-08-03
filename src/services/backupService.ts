@@ -1,5 +1,7 @@
 // Backup and restore service for localStorage data
 
+import { assertBackupSize, sanitizeBackupValue } from '../utils/importValidation';
+
 /** Exact keys owned by StretchBreak */
 const ALLOWED_STORAGE_KEYS = [
   'holiday-plans',
@@ -24,6 +26,9 @@ const ALLOWED_STORAGE_KEYS = [
   'weather-preferred-city',
 ] as const;
 
+/** Secrets that must not leave the device via backup/sync */
+const SENSITIVE_STORAGE_KEYS = new Set<string>(['webhook-url']);
+
 /** Prefix patterns for dynamic / cached keys */
 const ALLOWED_STORAGE_PREFIXES = [
   'total-pto-days-',
@@ -44,21 +49,25 @@ export const isAllowedStorageKey = (key: string): boolean => {
   return ALLOWED_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix));
 };
 
+export const isSensitiveStorageKey = (key: string): boolean => SENSITIVE_STORAGE_KEYS.has(key);
+
 export const listAllowedKeysInBackup = (backup: BackupData): string[] => {
-  return Object.keys(backup.data || {}).filter(isAllowedStorageKey);
+  return Object.keys(backup.data || {}).filter(
+    (key) => isAllowedStorageKey(key) && !isSensitiveStorageKey(key)
+  );
 };
 
 const serializeValue = (value: unknown): string => {
   return typeof value === 'string' ? value : JSON.stringify(value);
 };
 
-// Export only allowlisted localStorage data as JSON
+// Export only allowlisted localStorage data as JSON (excludes webhook credentials)
 export const exportBackup = (): BackupData => {
   const data: Record<string, unknown> = {};
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key || !isAllowedStorageKey(key)) continue;
+    if (!key || !isAllowedStorageKey(key) || isSensitiveStorageKey(key)) continue;
 
     try {
       const value = localStorage.getItem(key);
@@ -92,10 +101,16 @@ export const clearAppStorage = (): void => {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 };
 
-// Import backup data into localStorage (allowlisted keys only)
+// Import backup data into localStorage (allowlisted keys only; secrets skipped)
 export const importBackup = (backup: BackupData, mode: 'merge' | 'replace' = 'merge'): string[] => {
   if (!backup?.data || typeof backup.data !== 'object') {
     throw new Error('Invalid backup data');
+  }
+
+  try {
+    assertBackupSize(JSON.stringify(backup));
+  } catch (e) {
+    throw e instanceof Error ? e : new Error('Invalid backup data');
   }
 
   if (mode === 'replace') {
@@ -104,9 +119,11 @@ export const importBackup = (backup: BackupData, mode: 'merge' | 'replace' = 'me
 
   const imported: string[] = [];
   Object.entries(backup.data).forEach(([key, value]) => {
-    if (!isAllowedStorageKey(key)) return;
+    if (!isAllowedStorageKey(key) || isSensitiveStorageKey(key)) return;
+    const sanitized = sanitizeBackupValue(key, value);
+    if (sanitized === null || sanitized === undefined) return;
     try {
-      localStorage.setItem(key, serializeValue(value));
+      localStorage.setItem(key, serializeValue(sanitized));
       imported.push(key);
     } catch (e) {
       console.warn(`Failed to import key ${key}:`, e);
@@ -136,11 +153,17 @@ export const downloadBackup = (): void => {
 // Read backup from file
 export const readBackupFile = (file: File): Promise<BackupData> => {
   return new Promise((resolve, reject) => {
+    if (file.size > 500_000) {
+      reject(new Error('Backup file is too large'));
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
+        assertBackupSize(content);
         const backup = JSON.parse(content) as BackupData;
 
         if (!backup.version || !backup.data || typeof backup.data !== 'object') {
@@ -181,10 +204,20 @@ export const generateSyncCode = (): string | null => {
 // Parse sync code and import
 export const importFromSyncCode = (code: string, mode: 'merge' | 'replace' = 'merge'): string[] => {
   try {
+    if (code.trim().length > 150_000) {
+      throw new Error('Sync code is too large');
+    }
     const json = atob(code.trim());
+    assertBackupSize(json);
     const backup = JSON.parse(json) as BackupData;
     return importBackup(backup, mode);
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === 'Backup file is too large' || error.message === 'Sync code is too large')
+    ) {
+      throw error;
+    }
     throw new Error('Invalid sync code format');
   }
 };

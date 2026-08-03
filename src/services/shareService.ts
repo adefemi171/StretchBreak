@@ -1,4 +1,5 @@
 import type { HolidayPlan, VacationTemplate } from '../utils/types';
+import { validateSharedPlan, validateSharedTemplate } from '../utils/importValidation';
 
 export const encodePlanForSharing = (plan: HolidayPlan): string => {
   const shareablePlan = {
@@ -7,7 +8,7 @@ export const encodePlanForSharing = (plan: HolidayPlan): string => {
     countryCode: plan.countryCode,
     year: plan.year,
     vacationDays: plan.vacationDays,
-    publicHolidays: plan.publicHolidays.map(h => ({
+    publicHolidays: plan.publicHolidays.map((h) => ({
       date: h.date,
       localName: h.localName,
       name: h.name,
@@ -24,14 +25,10 @@ export const encodePlanForSharing = (plan: HolidayPlan): string => {
 
 export const decodeSharedPlan = (encoded: string): Partial<HolidayPlan> | null => {
   try {
+    if (encoded.length > 200_000) return null;
     const jsonString = decodeURIComponent(atob(encoded));
     const plan = JSON.parse(jsonString);
-
-    if (!plan.countryCode || !plan.year || !Array.isArray(plan.vacationDays)) {
-      throw new Error('Invalid plan data');
-    }
-
-    return plan;
+    return validateSharedPlan(plan);
   } catch {
     return null;
   }
@@ -75,21 +72,9 @@ export const decodeSharedTemplate = (
   encoded: string
 ): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
   try {
+    if (encoded.length > 50_000) return null;
     const parsed = JSON.parse(decodeURIComponent(atob(encoded)));
-    if (!parsed || typeof parsed.name !== 'string' || !parsed.name.trim()) {
-      return null;
-    }
-    if (parsed.kind && parsed.kind !== 'stretchbreak-template') {
-      return null;
-    }
-    return {
-      name: parsed.name.trim(),
-      description: typeof parsed.description === 'string' ? parsed.description : undefined,
-      strategy: parsed.strategy,
-      preferredMonths: Array.isArray(parsed.preferredMonths) ? parsed.preferredMonths : undefined,
-      typicalDurationDays:
-        typeof parsed.typicalDurationDays === 'number' ? parsed.typicalDurationDays : undefined,
-    };
+    return validateSharedTemplate(parsed);
   } catch {
     return null;
   }
@@ -127,17 +112,9 @@ export const parseTemplateJson = (
   raw: string
 ): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
   try {
+    if (raw.length > 50_000) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.name !== 'string' || !parsed.name.trim()) return null;
-    if (parsed.kind && parsed.kind !== 'stretchbreak-template') return null;
-    return {
-      name: parsed.name.trim(),
-      description: typeof parsed.description === 'string' ? parsed.description : undefined,
-      strategy: parsed.strategy,
-      preferredMonths: Array.isArray(parsed.preferredMonths) ? parsed.preferredMonths : undefined,
-      typicalDurationDays:
-        typeof parsed.typicalDurationDays === 'number' ? parsed.typicalDurationDays : undefined,
-    };
+    return validateSharedTemplate(parsed);
   } catch {
     return null;
   }
