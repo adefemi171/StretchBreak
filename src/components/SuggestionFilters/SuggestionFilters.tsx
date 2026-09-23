@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { SuggestionFilters, SuggestionSortBy } from '../../utils/types';
+import type { SuggestionFilters as SuggestionFiltersValue, SuggestionSortBy } from '../../utils/types';
 import { getEmptyFilters } from '../../utils/suggestionFilters';
 import './SuggestionFilters.css';
 
 interface SuggestionFiltersProps {
-  filters: SuggestionFilters;
-  onChange: (filters: SuggestionFilters) => void;
+  filters: SuggestionFiltersValue;
+  onChange: (filters: SuggestionFiltersValue) => void;
 }
 
 const MONTHS = [

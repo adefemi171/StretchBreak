@@ -21,13 +21,6 @@ const getStoredTheme = (): ThemeMode => {
   return 'system';
 };
 
-const getEffectiveTheme = (mode: ThemeMode): 'light' | 'dark' => {
-  if (mode === 'system') {
-    return getSystemTheme();
-  }
-  return mode;
-};
-
 const applyTheme = (theme: 'light' | 'dark') => {
   const root = document.documentElement;
   root.setAttribute('data-theme', theme);
@@ -35,35 +28,29 @@ const applyTheme = (theme: 'light' | 'dark') => {
 
 export const useTheme = () => {
   const [themeMode, setThemeMode] = useState<ThemeMode>(getStoredTheme);
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() => 
-    getEffectiveTheme(getStoredTheme())
-  );
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
+  const effectiveTheme = themeMode === 'system' ? systemTheme : themeMode;
 
   useEffect(() => {
-    const newEffectiveTheme = getEffectiveTheme(themeMode);
-    setEffectiveTheme(newEffectiveTheme);
-    applyTheme(newEffectiveTheme);
+    applyTheme(effectiveTheme);
 
     try {
       localStorage.setItem(THEME_STORAGE_KEY, themeMode);
     } catch (e) {
       console.warn('Failed to save theme preference:', e);
     }
-  }, [themeMode]);
+  }, [themeMode, effectiveTheme]);
 
   useEffect(() => {
-    if (themeMode !== 'system') return;
-
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
       const newTheme = e.matches ? 'dark' : 'light';
-      setEffectiveTheme(newTheme);
-      applyTheme(newTheme);
+      setSystemTheme(newTheme);
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [themeMode]);
+  }, []);
 
   return {
     themeMode,

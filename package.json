@@ -12,7 +12,13 @@
     "dev:full": "netlify dev",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node scripts/test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "audit:holidays": "node scripts/audit-holidays.mjs",
+    "check:ai-config": "node scripts/check-ai-config.mjs",
+    "check:deployment": "node scripts/check-deployment.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.11",
@@ -34,6 +40,15 @@
     "netlify-cli": "^27.0.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "esbuild": "^0.28.1"
+  },
+  "overrides": {
+    "ipx": {
+      "sharp": "0.35.4"
+    }
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

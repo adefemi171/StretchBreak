@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { isPast, parseISO, startOfDay, isSameDay } from 'date-fns';
+import { useState, useRef, useEffect } from 'react';
 import { chatWithAssistant } from '../../services/aiService';
+import type { AIPlanningContext } from '../../services/aiService';
 import type { PublicHoliday, UserPreferences, ChatMessage } from '../../utils/types';
 import './ChatAssistant.css';
 
-interface ChatAssistantProps {
+interface ChatAssistantProps extends Partial<AIPlanningContext> {
   holidays: PublicHoliday[];
   year: number;
   countryCode?: string;
@@ -18,17 +18,14 @@ export const ChatAssistant = ({
   countryCode,
   currentPlan,
   preferences,
+  selectedRegions,
+  availablePTODays,
+  workDays,
+  companyHolidays,
+  excludedHolidayDates,
+  startDate,
+  endDate,
 }: ChatAssistantProps) => {
-  const upcomingHolidays = useMemo(() => {
-    const today = startOfDay(new Date());
-    return holidays
-      .filter((holiday) => {
-        const holidayDate = startOfDay(parseISO(holiday.date));
-        return !isPast(holidayDate) || isSameDay(holidayDate, today);
-      })
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [holidays]);
-
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -40,6 +37,11 @@ export const ChatAssistant = ({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeRequest = useRef<AbortController | null>(null);
+  const contextKey = JSON.stringify({ year, countryCode, selectedRegions, availablePTODays, workDays, companyHolidays, excludedHolidayDates, startDate, endDate });
+  useEffect(() => {
+    return () => { activeRequest.current?.abort(); };
+  }, [contextKey]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,7 +53,10 @@ export const ChatAssistant = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || (loading && !activeRequest.current?.signal.aborted)) return;
+    const controller = new AbortController();
+    activeRequest.current?.abort();
+    activeRequest.current = controller;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -66,13 +71,21 @@ export const ChatAssistant = ({
 
     try {
       const response = await chatWithAssistant(input, {
-        holidays: upcomingHolidays,
+        holidays,
         year,
         countryCode,
         currentPlan,
         preferences,
+        selectedRegions,
+        availablePTODays,
+        workDays,
+        companyHolidays,
+        excludedHolidayDates,
+        startDate,
+        endDate,
         conversationHistory: messages,
-      });
+      }, controller.signal);
+      if (controller.signal.aborted || activeRequest.current !== controller) return;
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -83,6 +96,7 @@ export const ChatAssistant = ({
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
+      if (controller.signal.aborted || activeRequest.current !== controller) return;
       const errorMessage: ChatMessage = {
         id: (Date.now() + 2).toString(),
         role: 'assistant',
@@ -91,13 +105,13 @@ export const ChatAssistant = ({
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setLoading(false);
+      if (activeRequest.current === controller) setLoading(false);
     }
   };
 
   return (
     <div className="chat-assistant">
-      <div className="chat-messages">
+      <div className="chat-messages" role="log" aria-live="polite" aria-label="AI planning conversation">
         {messages.map((msg, idx) => (
           <div key={idx} className={`chat-message ${msg.role}`}>
             <div className="message-content">{msg.content}</div>
@@ -113,6 +127,8 @@ export const ChatAssistant = ({
       <form onSubmit={handleSubmit} className="chat-input-form">
         <input
           type="text"
+          aria-label="Message the AI planning assistant"
+          maxLength={2000}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask me about vacation planning..."
@@ -126,4 +142,3 @@ export const ChatAssistant = ({
     </div>
   );
 };
-

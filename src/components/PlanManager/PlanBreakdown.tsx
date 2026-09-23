@@ -3,7 +3,8 @@ import { detectPlanOverlaps } from '../../utils/planOverlap';
 import { analyzeConflicts } from '../../utils/conflictDetection';
 import { getAllPlans } from '../../services/planStorage';
 import type { HolidayPlan, PublicHoliday } from '../../utils/types';
-import { eachDayOfInterval, parseISO, subDays, addDays, isWeekend, format } from 'date-fns';
+import { eachDayOfInterval, parseISO, format } from 'date-fns';
+import { getVacationBreaks } from '../../utils/planningAlgorithm';
 import './PlanBreakdown.css';
 
 interface PlanBreakdownProps {
@@ -16,65 +17,15 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     return null;
   }
 
-  const sortedDates = [...plan.vacationDays].sort();
-  let startDate = parseISO(sortedDates[0]);
-  let endDate = parseISO(sortedDates[sortedDates.length - 1]);
-  
-  let checkDate = subDays(startDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
-    
-    if (isHoliday || isWeekendDay) {
-      startDate = checkDate;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
-  }
-  
-  checkDate = addDays(endDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
-    
-    if (isHoliday || isWeekendDay) {
-      endDate = checkDate;
-      checkDate = addDays(checkDate, 1);
-    } else {
-      break;
-    }
-  }
-  
-  const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+  const allHolidays = [...plan.publicHolidays, ...(plan.companyHolidays ?? []).map(h => ({ ...h, localName: h.name }))];
+  const breaks = getVacationBreaks(plan.vacationDays, allHolidays, plan.workDays);
+  const vacationDaysList = breaks.flatMap(period => period.leaveDates);
+  const datesOff = new Set(breaks.flatMap(period => eachDayOfInterval({ start: parseISO(period.startDate), end: parseISO(period.endDate) }).map(date => format(date, 'yyyy-MM-dd'))));
+  const holidayByDate = new Map(allHolidays.map(holiday => [holiday.date, holiday]));
+  const holidaysInPeriod = [...holidayByDate.values()].filter(holiday => datesOff.has(holiday.date));
+  const weekendsInPeriod = [...datesOff].filter(date => isWeekendDay(date, plan.workDays) && !holidayByDate.has(date));
+  const totalDaysOff = datesOff.size;
 
-  const vacationDaysList: string[] = [];
-  const holidaysInPeriod: PublicHoliday[] = [];
-  const weekendsInPeriod: string[] = [];
-
-  for (const day of allDays) {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    const isHoliday = holidays.find(h => h.date === dateStr);
-    const isWeekend = isWeekendDay(day);
-    const isVacationDay = plan.vacationDays.includes(dateStr);
-
-    if (isHoliday) {
-      holidaysInPeriod.push(isHoliday);
-    }
-    
-    if (isWeekend && !isVacationDay) {
-      weekendsInPeriod.push(dateStr);
-    }
-    
-    if (isVacationDay && !isWeekend && !isHoliday) {
-      vacationDaysList.push(dateStr);
-    }
-  }
-
-  const totalDaysOff = vacationDaysList.length + holidaysInPeriod.length + weekendsInPeriod.length;
-  
   const allPlans = getAllPlans();
   const overlapInfo = detectPlanOverlaps(plan, allPlans);
   const hasOverlaps = overlapInfo.overlapCount > 0;
@@ -96,7 +47,8 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
     plan.vacationDays,
     plan.publicHolidays?.length ? plan.publicHolidays : holidays,
     plan.companyHolidays || [],
-    usedDates
+    usedDates,
+    plan.workDays
   );
 
   return (
@@ -157,17 +109,18 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
           </div>
         </div>
       )}
+      <p>{breaks.map(period => `${formatDateDisplay(period.startDate)} – ${formatDateDisplay(period.endDate)}`).join("; ")}</p>
       <div className="breakdown-summary">
         <div className="summary-item">
           <span className="summary-label">Vacation Days (to take off):</span>
           <span className="summary-value highlight">{vacationDaysList.length}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">Public Holidays:</span>
+          <span className="summary-label">Public / Employer Holidays:</span>
           <span className="summary-value holiday">{holidaysInPeriod.length}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">Weekends:</span>
+          <span className="summary-label">Other Rest Days:</span>
           <span className="summary-value weekend">{weekendsInPeriod.length}</span>
         </div>
         <div className="summary-item total">
@@ -193,7 +146,7 @@ export const PlanBreakdown = ({ plan, holidays }: PlanBreakdownProps) => {
         </div>
 
         <div className="breakdown-section">
-          <h4>Public Holidays</h4>
+          <h4>Public / Employer Holidays</h4>
           <div className="dates-list">
             {holidaysInPeriod.length > 0 ? (
               holidaysInPeriod.map(holiday => (

@@ -1,26 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getAllTeamMembers, saveTeamMember, deleteTeamMember, createTeamMemberId, getConflictingTeamMembers } from '../../services/teamStorage';
 import { formatDateDisplay } from '../../utils/dateUtils';
-import type { TeamMember, HolidayPlan } from '../../utils/types';
+import type { TeamMember, HolidayPlan, PublicHoliday } from '../../utils/types';
 import './TeamPanel.css';
 
 interface TeamPanelProps {
   selectedDates?: string[];
   selectedPlan?: HolidayPlan | null;
-  holidays?: any[];
+  holidays?: PublicHoliday[];
 }
 
-export const TeamPanel = ({ selectedDates = [], selectedPlan, holidays = [] }: TeamPanelProps) => {
-  const [members, setMembers] = useState<TeamMember[]>([]);
+export const TeamPanel = ({ selectedDates = [], selectedPlan }: TeamPanelProps) => {
+  const [members, setMembers] = useState<TeamMember[]>(getAllTeamMembers);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newTimeOff, setNewTimeOff] = useState('');
   const [newColor, setNewColor] = useState('#0c7c74');
   const [showAddForm, setShowAddForm] = useState(false);
-
-  useEffect(() => {
-    loadMembers();
-  }, []);
 
   const loadMembers = () => {
     setMembers(getAllTeamMembers());

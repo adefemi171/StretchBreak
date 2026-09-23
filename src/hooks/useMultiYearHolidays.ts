@@ -1,72 +1,49 @@
-import { useState, useEffect, useRef } from 'react';
-import { fetchPublicHolidays } from '../services/holidayApi';
-import type { PublicHoliday } from '../utils/types';
+import { useState, useEffect } from 'react';
+import { fetchHolidayDataset } from '../services/holidayApi';
+import type { HolidaySourceMetadata, PublicHoliday } from '../utils/types';
 
 export interface MultiYearHolidaysResult {
   holidaysByYear: Map<number, PublicHoliday[]>;
+  metadataByYear: Map<number, HolidaySourceMetadata>;
   loading: boolean;
   error: string | null;
 }
 
-/**
- * Hook to fetch holidays for multiple years
- * Returns a map of year -> holidays array
- */
-export const useMultiYearHolidays = (
-  years: number[],
-  countryCode: string
-): MultiYearHolidaysResult => {
-  const [holidaysByYear, setHolidaysByYear] = useState<Map<number, PublicHoliday[]>>(new Map());
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const requestIdRef = useRef<number>(0);
+export const useMultiYearHolidays = (years: number[], countryCode: string): MultiYearHolidaysResult => {
+  const yearsKey = [...new Set(years)].sort((a, b) => a - b).join(',');
+  const requestKey = `${countryCode}:${yearsKey}`;
+  const [result, setResult] = useState<MultiYearHolidaysResult & { requestKey: string }>({
+    requestKey: '', holidaysByYear: new Map(), metadataByYear: new Map(), loading: false, error: null,
+  });
 
   useEffect(() => {
-    if (!countryCode || !years || years.length === 0) {
-      setHolidaysByYear(new Map());
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const currentRequestId = ++requestIdRef.current;
-
-    Promise.all(
-      years.map(year =>
-        fetchPublicHolidays(year, countryCode)
-          .then(holidays => ({ year, holidays }))
-          .catch(err => ({ year, holidays: [] as PublicHoliday[], error: err }))
-      )
-    )
-      .then(results => {
-        if (currentRequestId === requestIdRef.current) {
-          const map = new Map<number, PublicHoliday[]>();
-          let hasError = false;
-
-          results.forEach(result => {
-            if ('error' in result) {
-              hasError = true;
-            } else {
-              map.set(result.year, result.holidays);
-            }
-          });
-
-          setHolidaysByYear(map);
-          setLoading(false);
-          if (hasError) {
-            setError('Some years failed to load');
-          }
-        }
-      })
-      .catch(err => {
-        if (currentRequestId === requestIdRef.current) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch holidays');
-          setLoading(false);
-        }
+    let active = true;
+    if (!countryCode || !yearsKey) return;
+    Promise.all(yearsKey.split(',').map(Number).map(async year => {
+      try {
+        return { year, dataset: await fetchHolidayDataset(year, countryCode) };
+      } catch (error) {
+        return { year, error: error instanceof Error ? error.message : `Unable to load ${year} holidays.` };
+      }
+    })).then(results => {
+      if (!active) return;
+      const holidaysByYear = new Map<number, PublicHoliday[]>();
+      const metadataByYear = new Map<number, HolidaySourceMetadata>();
+      const errors: string[] = [];
+      results.forEach(result => {
+        if (result.dataset) {
+          holidaysByYear.set(result.year, result.dataset.holidays);
+          metadataByYear.set(result.year, result.dataset.metadata);
+        } else if (result.error) errors.push(result.error);
       });
-  }, [years.join(','), countryCode]);
+      setResult({ requestKey, holidaysByYear, metadataByYear, loading: false, error: errors.length ? errors.join(' ') : null });
+    });
+    return () => { active = false; };
+  }, [yearsKey, countryCode, requestKey]);
 
-  return { holidaysByYear, loading, error };
+  // Never expose a previous country's holidays while its replacement is loading.
+  if (result.requestKey !== requestKey || !countryCode || !yearsKey) {
+    return { holidaysByYear: new Map(), metadataByYear: new Map(), loading: Boolean(countryCode && yearsKey), error: null };
+  }
+  return result;
 };

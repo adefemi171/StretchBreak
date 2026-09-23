@@ -28,11 +28,13 @@ export const SmartRecommendations = ({
   onApplyMonths,
 }: SmartRecommendationsProps) => {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  const [climate, setClimate] = useState<ClimateSummary | null>(null);
-  const [forecastDays, setForecastDays] = useState<NearTermDay[]>([]);
-  const [weatherStatus, setWeatherStatus] = useState<WeatherStatus>('idle');
-  const [forecastPlace, setForecastPlace] = useState<string>('');
   const [weatherCityTick, setWeatherCityTick] = useState(0);
+  const context = `${countryCode}:${weatherCityTick}`;
+  const [weather, setWeather] = useState<{ context: string; climate: ClimateSummary | null; forecastDays: NearTermDay[]; forecastPlace: string } | null>(null);
+  const climate = weather?.context === context ? weather.climate : null;
+  const forecastDays = weather?.context === context ? weather.forecastDays : [];
+  const forecastPlace = weather?.context === context ? weather.forecastPlace : '';
+  const weatherStatus: WeatherStatus = weather?.context === context ? (climate ? 'ready' : 'unavailable') : 'loading';
 
   useEffect(() => {
     const onCityChange = () => setWeatherCityTick(t => t + 1);
@@ -42,10 +44,6 @@ export const SmartRecommendations = ({
 
   useEffect(() => {
     let cancelled = false;
-    setWeatherStatus('loading');
-    setClimate(null);
-    setForecastDays([]);
-    setForecastPlace('');
 
     (async () => {
       const [summary, forecast] = await Promise.all([
@@ -54,23 +52,13 @@ export const SmartRecommendations = ({
       ]);
       if (cancelled) return;
 
-      if (summary) {
-        setClimate(summary);
-        setWeatherStatus('ready');
-      } else {
-        setWeatherStatus('unavailable');
-      }
-
-      if (forecast) {
-        setForecastDays(forecast.days);
-        setForecastPlace(forecast.location.name);
-      }
+      setWeather({ context, climate: summary, forecastDays: forecast?.days ?? [], forecastPlace: forecast?.location.name ?? '' });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [countryCode, weatherCityTick]);
+  }, [countryCode, context]);
 
   const weatherInsights = useMemo(
     () => (climate ? buildWeatherInsights(climate) : []),

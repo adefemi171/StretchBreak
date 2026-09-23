@@ -1,4 +1,6 @@
 import type { UserPreferences, HolidayPlan } from '../utils/types';
+import { calculateEfficiency } from '../utils/planningAlgorithm';
+import { parseISO } from 'date-fns';
 import { getAllPlans } from './planStorage';
 
 const STORAGE_KEY = 'user-preferences';
@@ -9,7 +11,8 @@ export const getUserPreferences = (): UserPreferences => {
     if (stored) {
       return JSON.parse(stored);
     }
-  } catch (error) {
+  } catch {
+    // Corrupt saved preferences fall back to defaults.
   }
   
   return {
@@ -21,13 +24,14 @@ export const getUserPreferences = (): UserPreferences => {
 };
 
 export const updatePreferencesFromPlan = (_plan: HolidayPlan): void => {
+  void _plan;
   const plans = getAllPlans();
   
   // Extract preferred months from all plans
   const months = new Set<number>();
   plans.forEach(p => {
     p.vacationDays.forEach(dateStr => {
-      const date = new Date(dateStr);
+      const date = parseISO(dateStr);
       months.add(date.getMonth());
     });
   });
@@ -38,8 +42,8 @@ export const updatePreferencesFromPlan = (_plan: HolidayPlan): void => {
     : 5;
   
   const efficiencies = plans.map(p => {
-    const totalDays = p.vacationDays.length + p.publicHolidays.length;
-    return totalDays / p.vacationDays.length;
+    const { vacationDaysUsed, totalDaysOff } = calculateEfficiency(p.vacationDays, [...p.publicHolidays, ...(p.companyHolidays ?? [])], p.workDays);
+    return vacationDaysUsed > 0 ? totalDaysOff / vacationDaysUsed : 0;
   });
   const avgEfficiency = efficiencies.length > 0
     ? efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length

@@ -12,6 +12,7 @@ interface BridgeBoardProps {
   year: number;
   countryCode: string;
   loading?: boolean;
+  suggestions?: PlanSuggestion[];
   onUseBridge: (suggestion: PlanSuggestion) => void;
 }
 
@@ -20,6 +21,7 @@ export const BridgeBoard = ({
   year,
   countryCode,
   loading = false,
+  suggestions: candidates,
   onUseBridge,
 }: BridgeBoardProps) => {
   const [filters, setFilters] = useState<SuggestionFilters>(getEmptyFilters());
@@ -28,7 +30,7 @@ export const BridgeBoard = ({
     if (holidays.length === 0) return [];
 
     const today = startOfDay(new Date());
-    const suggestions = findOptimalVacationPeriods(holidays, year);
+    const suggestions = candidates ?? findOptimalVacationPeriods(holidays, year);
 
     const futureOrToday = suggestions.filter((s) => {
       const start = parseISO(s.startDate);
@@ -38,7 +40,7 @@ export const BridgeBoard = ({
     const filtered = applySuggestionFilters(futureOrToday, filters);
 
     return filtered.slice(0, 6);
-  }, [holidays, year, filters]);
+  }, [holidays, year, filters, candidates]);
 
   if (loading) {
     return (
@@ -49,9 +51,6 @@ export const BridgeBoard = ({
     );
   }
 
-  if (bridges.length === 0) {
-    return null;
-  }
 
   return (
     <section className="bridge-board" aria-label="Upcoming bridge day opportunities">
@@ -64,8 +63,9 @@ export const BridgeBoard = ({
         </div>
       </div>
 
-      <SuggestionFiltersUI filters={filters} onChange={setFilters} />
+      <details className="suggestion-filter-details"><summary>Filter breaks</summary><SuggestionFiltersUI filters={filters} onChange={setFilters} /></details>
 
+      {bridges.length === 0 && <div role="status"><p>No breaks match your allowance, timeframe and filters.</p><button type="button" className="ghost-button" onClick={() => setFilters(getEmptyFilters())}>Clear filters</button></div>}
       <div className="bridge-grid">
         {bridges.map((bridge) => (
           <article key={`${bridge.startDate}-${bridge.endDate}`} className="bridge-card">
@@ -82,7 +82,7 @@ export const BridgeBoard = ({
               <span>{bridge.totalDaysOff} days off</span>
             </div>
             <button type="button" className="bridge-use-button" onClick={() => onUseBridge(bridge)}>
-              Plan this break
+              Preview this break
             </button>
           </article>
         ))}

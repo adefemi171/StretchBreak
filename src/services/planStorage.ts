@@ -20,7 +20,7 @@ export const getAllPlans = (): HolidayPlan[] => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
     return JSON.parse(stored);
-  } catch (error) {
+  } catch {
     return [];
   }
 };

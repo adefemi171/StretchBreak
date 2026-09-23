@@ -17,20 +17,7 @@ const isSouthernHemisphere = (countryCode: string): boolean => {
   return SOUTHERN_HEMISPHERE_COUNTRIES.includes(countryCode.toUpperCase());
 };
 
-const getSeasonForMonth = (month: number, isSouthern: boolean): 'spring' | 'summer' | 'fall' | 'winter' => {
-  if (isSouthern) {
-    if (month >= 8 && month <= 10) return 'spring';
-    if (month === 11 || month <= 1) return 'summer';
-    if (month >= 2 && month <= 4) return 'fall';
-    return 'winter';
-  }
-  if (month >= 2 && month <= 4) return 'spring';
-  if (month >= 5 && month <= 7) return 'summer';
-  if (month >= 8 && month <= 10) return 'fall';
-  return 'winter';
-};
-
-const getSeasonalRecommendations = (countryCode: string, year: number): SmartRecommendation[] => {
+const getSeasonalRecommendations = (countryCode: string): SmartRecommendation[] => {
   const recommendations: SmartRecommendation[] = [];
   const isSouthern = isSouthernHemisphere(countryCode);
 
@@ -93,7 +80,7 @@ const getSeasonalRecommendations = (countryCode: string, year: number): SmartRec
   return recommendations;
 };
 
-const getWeatherRecommendations = (countryCode: string, year: number): SmartRecommendation[] => {
+const getWeatherRecommendations = (countryCode: string): SmartRecommendation[] => {
   const recommendations: SmartRecommendation[] = [];
   const isSouthern = isSouthernHemisphere(countryCode);
 
@@ -136,7 +123,7 @@ const getWeatherRecommendations = (countryCode: string, year: number): SmartReco
   return recommendations;
 };
 
-const getTravelTimingRecommendations = (countryCode: string, year: number): SmartRecommendation[] => {
+const getTravelTimingRecommendations = (countryCode: string): SmartRecommendation[] => {
   const recommendations: SmartRecommendation[] = [];
   const isSouthern = isSouthernHemisphere(countryCode);
 
@@ -185,7 +172,6 @@ const getTravelTimingRecommendations = (countryCode: string, year: number): Smar
 
 const getLocalEventRecommendations = (
   countryCode: string,
-  year: number,
   holidays: PublicHoliday[]
 ): SmartRecommendation[] => {
   const recommendations: SmartRecommendation[] = [];
@@ -292,12 +278,13 @@ const getLocalEventRecommendations = (
 
 export const generateSmartRecommendations = (
   countryCode: string,
-  year: number,
+  _year: number,
   holidays: PublicHoliday[],
   climate?: ClimateSummary | null,
   weatherInsights?: WeatherInsight[] | null
 ): SmartRecommendation[] => {
-  const heuristicWeather = getWeatherRecommendations(countryCode, year);
+  void _year;
+  const heuristicWeather = getWeatherRecommendations(countryCode);
   const liveWeather: SmartRecommendation[] = (weatherInsights || []).map(insight => ({
     type: 'weather' as const,
     title: insight.title,
@@ -315,10 +302,10 @@ export const generateSmartRecommendations = (
   }));
 
   const allRecommendations = [
-    ...getSeasonalRecommendations(countryCode, year),
+    ...getSeasonalRecommendations(countryCode),
     ...weather,
-    ...getTravelTimingRecommendations(countryCode, year),
-    ...getLocalEventRecommendations(countryCode, year, holidays),
+    ...getTravelTimingRecommendations(countryCode),
+    ...getLocalEventRecommendations(countryCode, holidays),
   ];
 
   // Attach climate context score bump for months that match mild climate

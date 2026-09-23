@@ -8,11 +8,14 @@ export const encodePlanForSharing = (plan: HolidayPlan): string => {
     countryCode: plan.countryCode,
     year: plan.year,
     vacationDays: plan.vacationDays,
-    publicHolidays: plan.publicHolidays.map((h) => ({
-      date: h.date,
-      localName: h.localName,
-      name: h.name,
-    })),
+    publicHolidays: plan.publicHolidays,
+    companyHolidays: plan.companyHolidays,
+    selectedRegions: plan.selectedRegions,
+    workDays: plan.workDays,
+    excludedHolidayDates: plan.excludedHolidayDates,
+    timeframe: plan.timeframe,
+    holidaySource: plan.holidaySource,
+
   };
 
   try {
@@ -37,18 +40,18 @@ export const decodeSharedPlan = (encoded: string): Partial<HolidayPlan> | null =
 export const generateShareUrl = (plan: HolidayPlan): string => {
   const encoded = encodePlanForSharing(plan);
   const baseUrl = window.location.origin + window.location.pathname;
-  return `${baseUrl}?share=${encoded}`;
+  return `${baseUrl}#${new URLSearchParams({ share: encoded })}`;
 };
 
 export const getSharedPlanFromUrl = (): Partial<HolidayPlan> | null => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const shareParam = urlParams.get('share');
+  const shareParam = new URLSearchParams(window.location.hash.slice(1)).get('share')
+    || new URLSearchParams(window.location.search).get('share');
 
   if (!shareParam) {
     return null;
   }
 
-  return decodeSharedPlan(shareParam);
+  return decodeSharedPlan(shareParam.replace(/ /g, '+'));
 };
 
 /** Local template share — encodes template prefs into the URL (not a cloud marketplace). */
@@ -83,14 +86,14 @@ export const decodeSharedTemplate = (
 export const generateTemplateShareUrl = (template: VacationTemplate): string => {
   const encoded = encodeTemplateForSharing(template);
   const baseUrl = window.location.origin + window.location.pathname;
-  return `${baseUrl}?template=${encoded}`;
+  return `${baseUrl}#${new URLSearchParams({ template: encoded })}`;
 };
 
 export const getSharedTemplateFromUrl = (): Omit<VacationTemplate, 'id' | 'isBuiltIn'> | null => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const param = urlParams.get('template');
+  const param = new URLSearchParams(window.location.hash.slice(1)).get('template')
+    || new URLSearchParams(window.location.search).get('template');
   if (!param) return null;
-  return decodeSharedTemplate(param);
+  return decodeSharedTemplate(param.replace(/ /g, '+'));
 };
 
 export const exportTemplateJson = (template: VacationTemplate): string => {

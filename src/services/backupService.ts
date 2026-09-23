@@ -21,6 +21,7 @@ const ALLOWED_STORAGE_KEYS = [
   'stretchbreak_vacation_templates',
   'vacation-budgets',
   'reminder-settings',
+  'reminder-last-check',
   'stretchbreak-public-calendar',
   'webhook-url',
   'weather-preferred-city',
@@ -31,7 +32,6 @@ const SENSITIVE_STORAGE_KEYS = new Set<string>(['webhook-url']);
 
 /** Prefix patterns for dynamic / cached keys */
 const ALLOWED_STORAGE_PREFIXES = [
-  'total-pto-days-',
   'open-meteo-climate-',
   'open-meteo-forecast-',
 ] as const;
@@ -46,14 +46,17 @@ export interface BackupData {
 
 export const isAllowedStorageKey = (key: string): boolean => {
   if ((ALLOWED_STORAGE_KEYS as readonly string[]).includes(key)) return true;
+  if (/^(total-pto-days|pto-carryover)-\d{4}$/.test(key)) return true;
   return ALLOWED_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix));
 };
+
+const isCacheStorageKey = (key: string): boolean => key.startsWith('open-meteo-climate-') || key.startsWith('open-meteo-forecast-');
 
 export const isSensitiveStorageKey = (key: string): boolean => SENSITIVE_STORAGE_KEYS.has(key);
 
 export const listAllowedKeysInBackup = (backup: BackupData): string[] => {
   return Object.keys(backup.data || {}).filter(
-    (key) => isAllowedStorageKey(key) && !isSensitiveStorageKey(key)
+    (key) => isAllowedStorageKey(key) && !isSensitiveStorageKey(key) && !isCacheStorageKey(key)
   );
 };
 
@@ -67,7 +70,7 @@ export const exportBackup = (): BackupData => {
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key || !isAllowedStorageKey(key) || isSensitiveStorageKey(key)) continue;
+    if (!key || !isAllowedStorageKey(key) || isSensitiveStorageKey(key) || isCacheStorageKey(key)) continue;
 
     try {
       const value = localStorage.getItem(key);
@@ -101,36 +104,65 @@ export const clearAppStorage = (): void => {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 };
 
-// Import backup data into localStorage (allowlisted keys only; secrets skipped)
-export const importBackup = (backup: BackupData, mode: 'merge' | 'replace' = 'merge'): string[] => {
-  if (!backup?.data || typeof backup.data !== 'object') {
-    throw new Error('Invalid backup data');
-  }
+const COLLECTION_KEYS = new Set(['holiday-plans', 'stretchbreak-team', 'stretchbreak-wishlist', 'stretchbreak-plan-versions', 'stretchbreak_vacation_templates', 'vacation-budgets']);
 
-  try {
-    assertBackupSize(JSON.stringify(backup));
-  } catch (e) {
-    throw e instanceof Error ? e : new Error('Invalid backup data');
+/** Validate all recognized values before making any storage changes. */
+export const prepareBackup = (backup: BackupData): Map<string, unknown> => {
+  if (!backup || backup.version !== '1.0' || !backup.data || typeof backup.data !== 'object' || Array.isArray(backup.data)) {
+    throw new Error('Invalid or unsupported backup data');
   }
-
-  if (mode === 'replace') {
-    clearAppStorage();
-  }
-
-  const imported: string[] = [];
-  Object.entries(backup.data).forEach(([key, value]) => {
-    if (!isAllowedStorageKey(key) || isSensitiveStorageKey(key)) return;
+  assertBackupSize(JSON.stringify(backup));
+  const prepared = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(backup.data)) {
+    if (!isAllowedStorageKey(key) || isSensitiveStorageKey(key) || isCacheStorageKey(key)) continue;
     const sanitized = sanitizeBackupValue(key, value);
-    if (sanitized === null || sanitized === undefined) return;
-    try {
-      localStorage.setItem(key, serializeValue(sanitized));
-      imported.push(key);
-    } catch (e) {
-      console.warn(`Failed to import key ${key}:`, e);
-    }
-  });
+    if (sanitized === null || sanitized === undefined) throw new Error(`Invalid backup value: ${key}. Nothing was restored.`);
+    prepared.set(key, sanitized);
+  }
+  if (!prepared.size) throw new Error('No recognized StretchBreak data found in this backup.');
+  return prepared;
+};
 
-  return imported;
+// LocalStorage has no transaction primitive: validate first and roll back every touched key on failure.
+export const importBackup = (backup: BackupData, mode: 'merge' | 'replace' = 'merge'): string[] => {
+  const prepared = prepareBackup(backup);
+  const before = new Map<string, string>();
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key && isAllowedStorageKey(key) && !isSensitiveStorageKey(key)) {
+      const value = localStorage.getItem(key);
+      if (value !== null) before.set(key, value);
+    }
+  }
+  const writes = new Map<string, string>();
+  for (const [key, importedValue] of prepared) {
+    let value = importedValue;
+    if (mode === 'merge' && COLLECTION_KEYS.has(key) && before.has(key)) {
+      let existing: unknown;
+      try { existing = sanitizeBackupValue(key, JSON.parse(before.get(key)!)); }
+      catch { throw new Error(`Existing ${key} data is invalid; merge was cancelled.`); }
+      if (!Array.isArray(existing) || !Array.isArray(value)) throw new Error(`Cannot merge ${key}. Nothing was restored.`);
+      const byId = new Map(existing.map(item => [item.id, item]));
+      value.forEach(item => byId.set(item.id, item));
+      value = sanitizeBackupValue(key, [...byId.values()]);
+      if (value === null) throw new Error(`Merged ${key} exceeds supported limits. Nothing was restored.`);
+    }
+    writes.set(key, serializeValue(value));
+  }
+  try {
+    for (const [key, value] of writes) localStorage.setItem(key, value);
+    if (mode === 'replace') for (const key of before.keys()) if (!writes.has(key)) localStorage.removeItem(key);
+  } catch (error) {
+    try {
+      // Free newly allocated keys first, so quota errors can be rolled back.
+      for (const key of writes.keys()) if (!before.has(key)) localStorage.removeItem(key);
+      for (const [key, value] of before) localStorage.setItem(key, value);
+    } catch {
+      throw new Error('Restore failed and browser storage prevented rollback. Keep your backup file and do not refresh until storage is available.');
+    }
+    throw new Error(`Restore failed; previous data was restored. ${error instanceof Error ? error.message : ''}`);
+  }
+  return [...writes.keys()];
 };
 
 // Download backup as JSON file
@@ -170,6 +202,7 @@ export const readBackupFile = (file: File): Promise<BackupData> => {
           throw new Error('Invalid backup file format');
         }
 
+        prepareBackup(backup);
         resolve(backup);
       } catch (error) {
         reject(new Error('Failed to parse backup file: ' + (error as Error).message));
@@ -184,7 +217,7 @@ export const readBackupFile = (file: File): Promise<BackupData> => {
   });
 };
 
-// Generate sync code (compressed base64 for copy-paste between devices)
+// Generate a versioned UTF-8/base64 snapshot for copy-paste between devices (not encrypted).
 export const generateSyncCode = (): string | null => {
   const backup = exportBackup();
   const json = JSON.stringify(backup);
@@ -194,30 +227,31 @@ export const generateSyncCode = (): string | null => {
   }
 
   try {
-    return btoa(json);
+    const bytes = new TextEncoder().encode(json);
+    const encoded = `sb1.${btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''))}`;
+    return encoded.length <= 150_000 ? encoded : null;
   } catch (e) {
     console.error('Failed to generate sync code:', e);
     return null;
   }
 };
 
-// Parse sync code and import
-export const importFromSyncCode = (code: string, mode: 'merge' | 'replace' = 'merge'): string[] => {
+export const parseSyncCode = (code: string): BackupData => {
+  const trimmed = code.trim();
+  if (trimmed.length > 150_000) throw new Error('Sync code is too large');
   try {
-    if (code.trim().length > 150_000) {
-      throw new Error('Sync code is too large');
-    }
-    const json = atob(code.trim());
+    const binary = atob(trimmed.startsWith('sb1.') ? trimmed.slice(4) : trimmed);
+    const json = trimmed.startsWith('sb1.')
+      ? new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(binary, character => character.charCodeAt(0)))
+      : binary; // Compatibility with old Latin-1/ASCII codes.
     assertBackupSize(json);
     const backup = JSON.parse(json) as BackupData;
-    return importBackup(backup, mode);
+    prepareBackup(backup);
+    return backup;
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message === 'Backup file is too large' || error.message === 'Sync code is too large')
-    ) {
-      throw error;
-    }
-    throw new Error('Invalid sync code format');
+    throw new Error(`Invalid sync code: ${error instanceof Error ? error.message : 'Invalid format'}`);
   }
 };
+
+export const importFromSyncCode = (code: string, mode: 'merge' | 'replace' = 'merge'): string[] =>
+  importBackup(parseSyncCode(code), mode);

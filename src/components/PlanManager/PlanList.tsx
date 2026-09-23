@@ -1,5 +1,5 @@
 import { getAllOverlappingDates } from '../../utils/planOverlap';
-import type { HolidayPlan } from '../../utils/types';
+import type { HolidayPlan, PublicHoliday } from '../../utils/types';
 import { PlanCard } from './PlanCard';
 import { PlanForm } from './PlanForm';
 import { ShareModal } from './ShareModal';
@@ -13,7 +13,7 @@ interface PlanListProps {
   onDeletePlan: (id: string) => void;
   onSelectPlan: (plan: HolidayPlan) => void;
   currentVacationDays: string[];
-  currentHolidays: any[];
+  currentHolidays: PublicHoliday[];
   currentCountryCode: string;
   currentYear: number;
 }
@@ -96,13 +96,13 @@ export const PlanList = ({
   return (
     <div className="plan-list">
       <div className="plan-list-header">
-        <h2>Saved Plans</h2>
+        <span className="saved-break-count">{plans.length ? `${plans.length} saved ${plans.length === 1 ? 'break' : 'breaks'}` : ''}</span>
         {plans.length >= 2 && (
           <button
             onClick={toggleCompareMode}
             className={`compare-mode-button ${compareMode ? 'active' : ''}`}
           >
-            {compareMode ? 'Exit Compare' : 'Compare Plans'}
+            {compareMode ? 'Exit Compare' : 'Compare breaks'}
           </button>
         )}
       </div>
@@ -158,7 +158,7 @@ export const PlanList = ({
 
       {plans.length === 0 && !showForm ? (
         <div className="empty-state">
-          <p>No saved plans yet. Go to the Planner tab to create your first plan!</p>
+          <p>Your saved breaks will appear here. Choose Plan a break to get started.</p>
         </div>
       ) : (
         <div className="plans-grid">

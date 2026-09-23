@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { generateAISuggestions, checkAIAvailability } from '../services/aiService';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { generateAISuggestions, checkAIAvailability, resetAIAvailabilityCache } from '../services/aiService';
+import type { AIPlanningContext } from '../services/aiService';
 import type { PublicHoliday, PlanSuggestion, UserPreferences } from '../utils/types';
 
 export const useAI = () => {
@@ -8,69 +9,46 @@ export const useAI = () => {
   const [error, setError] = useState<string | null>(null);
   const [aiReady, setAiReady] = useState(false);
   const [aiChecked, setAiChecked] = useState(false);
+  const active = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    checkAIAvailability().then((ready) => {
-      if (!cancelled) {
-        setAiReady(ready);
-        setAiChecked(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const generateSuggestions = useCallback(async (
-    holidays: PublicHoliday[],
-    year: number,
-    preferences?: UserPreferences
-  ) => {
-    if (holidays.length === 0) {
-      return;
-    }
-
+  const refreshAvailability = useCallback(async () => {
+    resetAIAvailabilityCache();
     const ready = await checkAIAvailability();
     setAiReady(ready);
     setAiChecked(true);
-
-    if (!ready) {
-      setAiSuggestions([]);
-      setError(null);
-      return;
-    }
-
+    return ready;
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    checkAIAvailability().then((ready) => {
+      if (!cancelled) { setAiReady(ready); setAiChecked(true); }
+    });
+    return () => { cancelled = true; active.current?.abort(); };
+  }, []);
+  const clearSuggestions = useCallback(() => {
+    active.current?.abort();
+    active.current = null;
+    setAiSuggestions([]);
+    setLoading(false);
+    setError(null);
+  }, []);
+  const generateSuggestions = useCallback(async (
+    holidays: PublicHoliday[], year: number, preferences?: UserPreferences, context?: AIPlanningContext
+  ) => {
+    active.current?.abort();
+    const controller = new AbortController();
+    active.current = controller;
     setLoading(true);
     setError(null);
-
+    setAiSuggestions([]);
     try {
-      const suggestions = await generateAISuggestions(holidays, year, preferences);
-      setAiSuggestions(suggestions);
+      const suggestions = await generateAISuggestions(holidays, year, preferences, context, controller.signal);
+      if (active.current === controller && !controller.signal.aborted) setAiSuggestions(suggestions);
     } catch (err) {
-      // Soft-fail network / offline — algorithmic suggestions still work
-      const message = err instanceof Error ? err.message : 'Failed to generate AI suggestions';
-      const isOffline =
-        message.toLowerCase().includes('failed to fetch') ||
-        message.toLowerCase().includes('offline');
-      if (isOffline) {
-        setAiReady(false);
-        setError(null);
-      } else {
-        setError(message);
-      }
-      setAiSuggestions([]);
+      if (active.current === controller && !controller.signal.aborted) setError(err instanceof Error ? err.message : 'AI is temporarily unavailable.');
     } finally {
-      setLoading(false);
+      if (active.current === controller) { setLoading(false); active.current = null; }
     }
   }, []);
-
-  return {
-    aiSuggestions,
-    loading,
-    error,
-    generateSuggestions,
-    isAIAvailable: aiReady,
-    aiChecked,
-  };
+  return { aiSuggestions, loading, error, generateSuggestions, clearSuggestions, refreshAvailability, isAIAvailable: aiReady, aiChecked };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getVersionsByPlanId, saveVersion, deleteVersion, restoreVersion } from '../../services/planVersionStorage';
 import { savePlan } from '../../services/planStorage';
 import type { PlanVersion, HolidayPlan } from '../../utils/types';
@@ -9,16 +9,14 @@ interface PlanVersionsProps {
   onPlanUpdated?: () => void;
 }
 
-export const PlanVersions = ({ plan, onPlanUpdated }: PlanVersionsProps) => {
-  const [versions, setVersions] = useState<PlanVersion[]>([]);
+export const PlanVersions = (props: PlanVersionsProps) => <PlanVersionsForPlan key={props.plan.id} {...props} />;
+
+const PlanVersionsForPlan = ({ plan, onPlanUpdated }: PlanVersionsProps) => {
+  const [versions, setVersions] = useState<PlanVersion[]>(() => getVersionsByPlanId(plan.id));
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
   const [compareMode, setCompareMode] = useState(false);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
-
-  useEffect(() => {
-    loadVersions();
-  }, [plan.id]);
 
   const loadVersions = () => {
     setVersions(getVersionsByPlanId(plan.id));

@@ -1,5 +1,6 @@
 import type { HolidayPlan } from '../utils/types';
 import { isSafeIsoDate } from '../utils/importValidation';
+import { addDays, format, parseISO } from 'date-fns';
 
 /** Escape text for ICS SUMMARY/DESCRIPTION (newlines, commas, semicolons, backslashes). */
 export const escapeIcsText = (value: string): string => {
@@ -18,6 +19,37 @@ export const toIcsDateValue = (value: string): string | null => {
   return value.replace(/-/g, '');
 };
 
+const nextDate = (date: string): string => format(addDays(parseISO(date), 1), 'yyyy-MM-dd');
+
+// RFC 5545 limits physical lines to 75 octets (not 75 JavaScript characters).
+const foldIcsLine = (line: string): string => {
+  const lines: string[] = [];
+  let current = '';
+  let bytes = 0;
+  const encoder = new TextEncoder();
+  for (const character of line) {
+    const size = encoder.encode(character).length;
+    if (bytes + size > 75) {
+      lines.push(current);
+      current = ' ';
+      bytes = 1;
+    }
+    current += character;
+    bytes += size;
+  }
+  return [...lines, current].join('\r\n');
+};
+
+export const getCalendarLeavePeriods = (plan: HolidayPlan): Array<{ startDate: string; endDate: string }> => {
+  const periods: Array<{ startDate: string; endDate: string }> = [];
+  for (const date of [...new Set(plan.vacationDays.filter(isSafeIsoDate))].sort()) {
+    const previous = periods[periods.length - 1];
+    if (previous && nextDate(previous.endDate) === date) previous.endDate = date;
+    else periods.push({ startDate: date, endDate: date });
+  }
+  return periods;
+};
+
 export const generateICal = (plan: HolidayPlan): string => {
   const lines: string[] = [];
   
@@ -31,25 +63,27 @@ export const generateICal = (plan: HolidayPlan): string => {
     const dateStr = toIcsDateValue(holiday.date);
     if (!dateStr) return;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:holiday-${dateStr}@stretchbreak`);
+    lines.push(`UID:holiday-${encodeURIComponent(plan.id)}-${encodeURIComponent(holiday.localName)}-${dateStr}@stretchbreak`);
+    lines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}`);
     lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
-    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
+    lines.push(`DTEND;VALUE=DATE:${toIcsDateValue(nextDate(holiday.date))}`);
     lines.push(`SUMMARY:${escapeIcsText(holiday.localName)}`);
     lines.push(`DESCRIPTION:${escapeIcsText(`Public Holiday - ${holiday.name}`)}`);
     lines.push('TRANSP:TRANSPARENT');
     lines.push('END:VEVENT');
   });
   
-  plan.vacationDays.forEach((date, index) => {
+  [...new Set(plan.vacationDays)].sort().forEach((date, index) => {
     const dateStr = toIcsDateValue(date);
     if (!dateStr) return;
     const description = plan.description
       ? `${plan.name} - ${plan.description}`
       : plan.name;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:vacation-${dateStr}@stretchbreak`);
+    lines.push(`UID:vacation-${encodeURIComponent(plan.id)}-${dateStr}@stretchbreak`);
+    lines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}`);
     lines.push(`DTSTART;VALUE=DATE:${dateStr}`);
-    lines.push(`DTEND;VALUE=DATE:${dateStr}`);
+    lines.push(`DTEND;VALUE=DATE:${toIcsDateValue(nextDate(date))}`);
     lines.push(`SUMMARY:${escapeIcsText(`Vacation Day ${index + 1}`)}`);
     lines.push(`DESCRIPTION:${escapeIcsText(description)}`);
     lines.push('TRANSP:OPAQUE');
@@ -58,7 +92,7 @@ export const generateICal = (plan: HolidayPlan): string => {
   
   lines.push('END:VCALENDAR');
   
-  return lines.join('\r\n');
+  return lines.map(foldIcsLine).join('\r\n') + '\r\n';
 };
 
 export const downloadICal = (plan: HolidayPlan): void => {
@@ -74,74 +108,40 @@ export const downloadICal = (plan: HolidayPlan): void => {
   URL.revokeObjectURL(url);
 };
 
-// Generate Google Calendar deep link
+export const generateGoogleCalendarUrls = (plan: HolidayPlan): string[] => getCalendarLeavePeriods(plan).map(period => {
+  const params = new URLSearchParams({
+    action: 'TEMPLATE', text: `${plan.name} - Vacation`,
+    dates: `${toIcsDateValue(period.startDate)}/${toIcsDateValue(nextDate(period.endDate))}`,
+    details: plan.description ?? 'Planned PTO leave',
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+});
+
+export const generateOutlookUrls = (plan: HolidayPlan): string[] => getCalendarLeavePeriods(plan).map(period => {
+  const params = new URLSearchParams({
+    subject: `${plan.name} - Vacation`, body: plan.description ?? 'Planned PTO leave',
+    startdt: period.startDate, enddt: nextDate(period.endDate), allday: 'true',
+  });
+  return `https://outlook.office.com/calendar/0/deeplink/compose?${params}`;
+});
+
+// Legacy single-event callers must not silently combine separate leave periods.
 export const generateGoogleCalendarUrl = (plan: HolidayPlan): string => {
-  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
-  if (sortedDays.length === 0) return '';
-  
-  const firstDay = sortedDays[0];
-  const lastDay = sortedDays[sortedDays.length - 1];
-  
-  // Format dates as YYYYMMDD for Google Calendar
-  const startDate = toIcsDateValue(firstDay);
-  const endDate = toIcsDateValue(lastDay);
-  if (!startDate || !endDate) return '';
-  
-  const title = encodeURIComponent(`${plan.name} - Vacation`);
-  const details = encodeURIComponent(
-    plan.description 
-      ? `${plan.description}\n\nVacation days: ${plan.vacationDays.length}` 
-      : `Vacation days: ${plan.vacationDays.length}`
-  );
-  
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}`;
+  const urls = generateGoogleCalendarUrls(plan);
+  return urls.length === 1 ? urls[0] : '';
 };
-
-// Generate Outlook web deep link
 export const generateOutlookUrl = (plan: HolidayPlan): string => {
-  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
-  if (sortedDays.length === 0) return '';
-  
-  const firstDay = sortedDays[0];
-  const lastDay = sortedDays[sortedDays.length - 1];
-  
-  const title = encodeURIComponent(`${plan.name} - Vacation`);
-  const body = encodeURIComponent(
-    plan.description 
-      ? `${plan.description}\n\nVacation days: ${plan.vacationDays.length}` 
-      : `Vacation days: ${plan.vacationDays.length}`
-  );
-  
-  // Outlook expects ISO 8601 format
-  return `https://outlook.office.com/calendar/0/deeplink/compose?subject=${title}&body=${body}&startdt=${firstDay}&enddt=${lastDay}&allday=true`;
+  const urls = generateOutlookUrls(plan);
+  return urls.length === 1 ? urls[0] : '';
 };
 
-// Generate Slack/Teams formatted message
 export const generateSlackMessage = (plan: HolidayPlan): string => {
-  const sortedDays = plan.vacationDays.filter(isSafeIsoDate).sort();
-  if (sortedDays.length === 0) return '';
-  
-  const firstDay = sortedDays[0];
-  const lastDay = sortedDays[sortedDays.length - 1];
-  
-  // Format dates nicely
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-  
-  let message = `*Vacation Notice: ${plan.name}*\n\n`;
-  message += `📅 *Dates:* ${formatDate(firstDay)}`;
-  if (firstDay !== lastDay) {
-    message += ` - ${formatDate(lastDay)}`;
-  }
-  message += `\n🌴 *PTO Days Used:* ${plan.vacationDays.length}\n`;
-  
-  if (plan.description) {
-    message += `\n${plan.description}`;
-  }
-  
-  return message;
+  const periods = getCalendarLeavePeriods(plan);
+  if (!periods.length) return '';
+  const display = (date: string) => format(parseISO(date), 'MMM d, yyyy');
+  const dates = periods.map(period => period.startDate === period.endDate ? display(period.startDate)
+    : `${display(period.startDate)} – ${display(period.endDate)}`).join('; ');
+  return `*Vacation Notice: ${plan.name}*\n\n📅 *Leave dates:* ${dates}\n🌴 *PTO Days Used:* ${new Set(plan.vacationDays.filter(isSafeIsoDate)).size}\n${plan.description ? `\n${plan.description}` : ''}`;
 };
 
 /**

@@ -17,9 +17,11 @@ export const useLocation = () => {
       if (!country) {
         setError('Could not detect your location');
       }
+      return country;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to detect location');
       setDetectedCountry(null);
+      return null;
     } finally {
       setIsDetecting(false);
     }

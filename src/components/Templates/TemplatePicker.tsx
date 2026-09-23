@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import type { VacationTemplate, VacationStrategy } from '../../utils/types';
 import { getAllTemplates, saveTemplate, deleteTemplate } from '../../services/templateStorage';
 import {
@@ -20,7 +20,7 @@ export const TemplatePicker = ({
   currentStrategy,
   currentPreferredMonths,
 }: TemplatePickerProps) => {
-  const [templates, setTemplates] = useState<VacationTemplate[]>([]);
+  const [templates, setTemplates] = useState<VacationTemplate[]>(getAllTemplates);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDescription, setNewTemplateDescription] = useState('');
@@ -29,10 +29,6 @@ export const TemplatePicker = ({
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setTemplates(getAllTemplates());
-  }, []);
 
   const refresh = () => setTemplates(getAllTemplates());
 

@@ -5,6 +5,16 @@
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
+.export-extra > summary { cursor: pointer; padding: .75rem 0; font-weight: 600; min-height: 44px; }
+.export-extra:not([open]) { padding-bottom: 0; margin-bottom: .25rem; }
+.export-extra[open] > summary { margin-bottom: .75rem; }
+.calendar-export-period { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
+.calendar-export-period p { flex-basis: 100%; margin: .5rem 0 0; }
+.ooo-controls label, .ooo-controls select { max-width: 100%; }
+@media (max-width: 600px) {
+  .ooo-controls label { flex-wrap: wrap; }
+  .export-panel { padding: 1rem; }
+}
 
 .export-panel h3 {
   margin: 0 0 1.25rem;

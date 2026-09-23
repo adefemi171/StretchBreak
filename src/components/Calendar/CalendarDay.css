@@ -90,3 +90,8 @@
   background: var(--sun);
   font-size: 0;
 }
+
+button.calendar-day { font: inherit; text-align: left; border-radius: 0; width: 100%; min-width: 0; color: var(--ink); }
+.calendar-day:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; z-index: 2; }
+.calendar-day[aria-disabled="true"] { cursor: default; }
+.calendar-day .holiday-name, .calendar-day .company-holiday-name { max-width: 100%; }

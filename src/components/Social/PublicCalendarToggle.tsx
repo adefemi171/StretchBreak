@@ -1,21 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { HolidayPlan } from '../../utils/types';
 import { generateShareUrl, copyToClipboard } from '../../services/shareService';
 import './PublicCalendarToggle.css';
 
-const STORAGE_KEY = 'stretchbreak-public-calendar';
 
 interface PublicCalendarToggleProps {
   plan: HolidayPlan | null;
 }
 
 export const PublicCalendarToggle = ({ plan }: PublicCalendarToggleProps) => {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === 'true');
+  const [enabled, setEnabled] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
-  }, [enabled]);
 
   if (!plan || plan.vacationDays.length === 0) {
     return null;
@@ -40,10 +36,10 @@ export const PublicCalendarToggle = ({ plan }: PublicCalendarToggleProps) => {
     <section className="public-calendar" aria-labelledby="public-cal-title">
       <header className="public-calendar-header">
         <div>
-          <h3 id="public-cal-title">Public vacation calendar</h3>
+          <h3 id="public-cal-title">Share a plan snapshot</h3>
           <p className="public-calendar-desc">
-            Generates a local share URL with plan data encoded in the query string — not hosted publicly,
-            not encrypted, and not a real ACL. Off by default.
+            Anyone with this link can read the plan name, notes, dates and holiday settings.
+            The snapshot is not encrypted and cannot be revoked. Hiding this preview does not disable links already copied.
           </p>
         </div>
         <label className="public-calendar-switch">
@@ -51,14 +47,16 @@ export const PublicCalendarToggle = ({ plan }: PublicCalendarToggleProps) => {
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            aria-label="Enable public share link for this plan"
+            aria-label="Show share preview for this plan"
           />
-          <span>{enabled ? 'On' : 'Off'}</span>
+          <span>{enabled ? 'Hide preview' : 'Show preview'}</span>
         </label>
       </header>
 
       {enabled && (
         <div className="public-calendar-body">
+          <p><strong>{plan.name}</strong>{plan.description ? ` · ${plan.description}` : ''}</p>
+          <p>{plan.countryCode} · {plan.vacationDays.length} selected dates · {(plan.selectedRegions || []).join(', ') || 'National holidays only'}</p>
           <div className="public-calendar-months" aria-label="Months with vacation days">
             {months.map(month => {
               const days = plan.vacationDays.filter(d => d.startsWith(month)).length;
@@ -71,7 +69,7 @@ export const PublicCalendarToggle = ({ plan }: PublicCalendarToggleProps) => {
             })}
           </div>
           <button type="button" className="public-calendar-copy" onClick={handleCopy}>
-            {copied ? 'Link copied' : 'Copy public share link'}
+            {copied ? 'Link copied' : 'Copy snapshot link'}
           </button>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { VacationBudget } from '../../utils/types';
 import { createBudgetId, saveBudget, getAllBudgets, deleteBudget } from '../../services/budgetStorage';
 import { calculateCost, formatCurrency, getSuggestedMultiplier, compareBudgets } from '../../utils/vacationCost';
@@ -6,13 +6,15 @@ import './BudgetCalculator.css';
 
 interface BudgetCalculatorProps {
   planId?: string;
+  showSavedBudgets?: boolean;
   startDate: string;
   endDate: string;
   periodLabel: string;
 }
 
-export const BudgetCalculator = ({ planId, startDate, endDate, periodLabel }: BudgetCalculatorProps) => {
-  const [budgets, setBudgets] = useState<VacationBudget[]>([]);
+export const BudgetCalculator = ({ planId, startDate, endDate, periodLabel, showSavedBudgets = true }: BudgetCalculatorProps) => {
+  const [allBudgets, setBudgets] = useState<VacationBudget[]>(getAllBudgets);
+  const budgets = showSavedBudgets ? allBudgets.filter(budget => budget.planId === planId) : [];
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -29,17 +31,7 @@ export const BudgetCalculator = ({ planId, startDate, endDate, periodLabel }: Bu
     peakSeasonMultiplier: getSuggestedMultiplier(startDate, endDate),
   });
 
-  useEffect(() => {
-    loadBudgets();
-  }, [planId]);
-
-  const loadBudgets = () => {
-    const allBudgets = getAllBudgets();
-    const filtered = planId 
-      ? allBudgets.filter(b => b.planId === planId)
-      : allBudgets;
-    setBudgets(filtered);
-  };
+  const loadBudgets = () => setBudgets(getAllBudgets());
 
   const handleSave = () => {
     const budget: VacationBudget = {
@@ -101,7 +93,7 @@ export const BudgetCalculator = ({ planId, startDate, endDate, periodLabel }: Bu
     <div className="budget-calculator">
       <div className="budget-header">
         <h3>Vacation Budget</h3>
-        <p className="budget-subtitle">Estimate costs for your trip</p>
+        <p className="budget-subtitle">{periodLabel}: {startDate} – {endDate}</p>
       </div>
 
       {!showForm ? (

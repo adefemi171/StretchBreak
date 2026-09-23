@@ -95,9 +95,7 @@
 }
 
 .pto-carryover-section {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  margin-top: 0;
 }
 
 .pto-carryover-label {
@@ -150,4 +148,12 @@
 .pto-effective-total {
   color: var(--accent);
   font-weight: 700;
+}
+
+.pto-input-carryover { margin-bottom: 0; }
+.pto-carryover-inputs input, .pto-carryover-inputs select { box-sizing: border-box; min-width: 0; }
+.pto-carryover-section .pto-effective-text { margin-top: 0.75rem; }
+.pto-input-all .pto-carryover-section { margin-top: 1.5rem; }
+@media (max-width: 540px) {
+  .pto-carryover-inputs { grid-template-columns: 1fr; }
 }

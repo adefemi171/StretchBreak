@@ -14,7 +14,6 @@ export const CommunityInsights = ({
   plans,
   holidays,
   year,
-  countryCode,
 }: CommunityInsightsProps) => {
   const { popularPeriods, insights } = useMemo(() => {
     try {

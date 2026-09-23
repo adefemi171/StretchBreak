@@ -8,6 +8,18 @@ export interface PublicHoliday {
   counties: string[] | null;
   launchYear: number | null;
   types: string[];
+  sourceUrl?: string;
+  verifiedOn?: string;
+}
+
+export interface HolidaySourceMetadata {
+  provider: 'Nager.Date';
+  sourceUrl: string;
+  retrievedAt: string;
+  freshness: 'fresh' | 'stale' | 'unknown';
+  coverage: 'provider-unverified';
+  policyVersion: string;
+  overrideSources: string[];
 }
 
 export interface HolidayPlan {
@@ -19,6 +31,11 @@ export interface HolidayPlan {
   vacationDays: string[];
   publicHolidays: PublicHoliday[];
   companyHolidays?: CompanyHoliday[];
+  selectedRegions?: string[];
+  workDays?: number[]; // JavaScript weekdays: 0 = Sunday, 6 = Saturday
+  excludedHolidayDates?: string[]; // Public holidays that the employer treats as working days
+  holidaySource?: HolidaySourceMetadata;
+  timeframe?: PlanningConfig['timeframe'];
   strategy?: VacationStrategy;
   availablePTODays?: number;
   createdAt: string;
@@ -26,6 +43,7 @@ export interface HolidayPlan {
 }
 
 export interface PlanSuggestion {
+  leaveDates?: string[]; // Exact PTO dates; start/end delimit the complete break
   startDate: string;
   endDate: string;
   vacationDaysUsed: number;
@@ -65,6 +83,7 @@ export interface CompanyHoliday {
 }
 
 export interface PTOCarryover {
+  year?: number;
   days: number;
   expiryMonth: number; // 1-12, expires at end of that month in the planning year
 }
@@ -80,6 +99,8 @@ export interface PlanningConfig {
   };
   companyHolidays: CompanyHoliday[];
   selectedRegions?: string[];
+  workDays?: number[];
+  excludedHolidayDates?: string[];
   carryover?: PTOCarryover;
 }
 
@@ -153,4 +174,3 @@ export interface PlanVersion {
   snapshot: HolidayPlan;
   createdAt: string;
 }
-

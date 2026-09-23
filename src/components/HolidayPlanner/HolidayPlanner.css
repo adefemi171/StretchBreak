@@ -2,61 +2,50 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
-.pto-display-section {
+.manual-date-options {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.5rem;
-  box-shadow: var(--shadow-sm);
+  padding: 1rem 1.25rem;
 }
 
-.pto-display-description {
-  margin: 0 0 1rem;
+.suggestion-filter-options > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0.4rem 0;
+}
+
+.suggestion-filter-options[open] > summary {
+  margin-bottom: 1rem;
+}
+
+.calendar-disclosure-button {
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  padding: 0.35rem 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.calendar-help {
   color: var(--muted);
   font-size: 0.95rem;
+  margin: 0.5rem 0 1rem;
 }
 
-.pto-display-stats {
+.choose-another-break {
+  align-self: flex-start;
+}
+
+.break-options-content {
   display: flex;
-  gap: 1.75rem;
-  flex-wrap: wrap;
-}
-
-.pto-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.pto-stat-label {
-  font-weight: 600;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.pto-stat-value {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.35rem;
-  color: var(--accent);
-  letter-spacing: -0.02em;
-}
-
-.pto-stat-value.pto-zero {
-  color: var(--danger);
-}
-
-.pto-stat-value.pto-low {
-  color: var(--sun);
-}
-
-.strategy-selector-section {
-  padding: 1.35rem 1.5rem;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  flex-direction: column;
+  gap: 1.5rem;
 }

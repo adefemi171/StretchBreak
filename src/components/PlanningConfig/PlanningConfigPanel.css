@@ -1,5 +1,5 @@
 .planning-config-panel {
-  padding: 2rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -14,113 +14,97 @@
 
 .config-subtitle {
   color: var(--muted);
-  margin: 0 0 2rem;
+  margin: 0 0 1.6rem;
   font-size: 1rem;
-  max-width: 36rem;
 }
 
-.config-steps {
+.config-essential-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(6rem, 0.6fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.config-essential-fields > * { min-width: 0; }
+
+.config-location-field .country-selector {
   display: flex;
+  width: 100%;
   flex-direction: column;
-  gap: 1.75rem;
-}
-
-.config-step {
-  display: flex;
-  gap: 1.15rem;
-  align-items: flex-start;
-}
-
-.step-number {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
-  box-shadow: 0 6px 14px rgba(12, 124, 116, 0.25);
-}
-
-.step-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.templates-toggle-section {
-  margin-top: 1.75rem;
-  padding-top: 1.75rem;
-  border-top: 1px solid var(--border);
-}
-
-.templates-toggle-btn {
-  background: none;
-  border: none;
-  color: var(--ink);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0.5rem 0;
-  transition: color 0.2s var(--ease-out);
-  display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
 }
 
-.templates-toggle-btn:hover {
-  color: var(--accent);
+.config-year-field label,
+.config-location-field .country-selector label,
+.config-essential-fields .pto-label {
+  display: block;
+  font-family: inherit;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.optimize-section {
-  margin-top: 2rem;
-  padding-top: 1.75rem;
-  border-top: 1px solid var(--border);
-  text-align: left;
+.config-year-field { display: grid; gap: 0.5rem; }
+
+.config-year-field select,
+.config-location-field .country-select,
+.config-essential-fields .pto-input-field {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  min-height: 48px;
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
+.config-year-field select:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--accent); }
+.config-essential-fields .pto-label { margin-bottom: 0.5rem; }
+.config-essential-fields .pto-input { margin: 0; }
+.config-range-hint { color: var(--muted); font-size: 0.85rem; margin: 1rem 0 0; }
+
+.config-more-options { margin-top: 1.5rem; }
+.config-more-options > summary {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  width: fit-content;
+}
+.config-more-options > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 3px; }
+.config-advanced-fields { display: grid; gap: 1.5rem; padding-top: 1.25rem; }
+.config-option-group { border-top: 1px solid var(--border); padding-top: 1.5rem; min-width: 0; }
+.config-option-group h3 { color: var(--ink); margin: 0 0 0.75rem; font-size: 1rem; }
+
+.optimize-section { margin-top: 1.5rem; }
 .optimize-button {
   padding: 0.9rem 1.6rem;
   background: var(--accent);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
+  min-height: 48px;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), background 0.2s var(--ease-out);
-  box-shadow: 0 10px 22px rgba(12, 124, 116, 0.28);
+  transition: background 0.2s var(--ease-out);
 }
+.optimize-button:hover:not(:disabled) { background: var(--accent-hover); }
+.optimize-button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.optimize-button:disabled { opacity: 0.55; cursor: not-allowed; }
+.optimize-hint { margin: 0.65rem 0 0; color: var(--muted); font-size: 0.85rem; }
 
-.optimize-button:hover:not(:disabled) {
-  background: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(12, 124, 116, 0.32);
-}
-
-.optimize-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.optimize-hint {
-  margin-top: 0.75rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-@media (max-width: 640px) {
-  .planning-config-panel {
-    padding: 1.35rem;
-  }
-
-  .config-step {
-    gap: 0.85rem;
-  }
+@media (max-width: 700px) {
+  .config-essential-fields { grid-template-columns: 1fr; gap: 1rem; }
+  .optimize-button { width: 100%; }
 }

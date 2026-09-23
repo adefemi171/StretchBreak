@@ -6,6 +6,7 @@ import {
   getRemainingPTODaysForYear,
   hasTotalPTODaysForYear,
 } from '../../services/ptoTracking';
+import { calculateYearStats } from '../../utils/vacationAnalytics';
 import type { HolidayPlan } from '../../utils/types';
 import './MultiYearOverview.css';
 
@@ -30,6 +31,7 @@ export const MultiYearOverview = ({ onSelectPlan }: MultiYearOverviewProps) => {
     const plans = getAllPlans();
     const statsByYear = new Map<number, YearStats>();
 
+    const seenDates = new Set<string>();
     plans.forEach(plan => {
       const year = plan.year;
       
@@ -53,18 +55,19 @@ export const MultiYearOverview = ({ onSelectPlan }: MultiYearOverviewProps) => {
 
       plan.vacationDays.forEach(dateStr => {
         if (dateStr && typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-          const date = new Date(dateStr);
-          if (date.getFullYear() === year) {
-            const month = date.getMonth();
-            stats.monthDistribution[month] += 1;
+          if (Number(dateStr.slice(0, 4)) === year && !seenDates.has(dateStr)) {
+            stats.monthDistribution[Number(dateStr.slice(5, 7)) - 1] += 1;
+            seenDates.add(dateStr);
           }
         }
       });
 
-      stats.totalDaysOff = plan.vacationDays.length + (plan.publicHolidays?.length || 0);
+
     });
 
+    const calculatedStats = calculateYearStats(plans);
     statsByYear.forEach((stats, year) => {
+      stats.totalDaysOff = calculatedStats.find(stat => stat.year === year)?.totalDaysOff ?? 0;
       stats.ptoUsed = getUsedPTODaysForYear(year);
       stats.totalPTO = getTotalPTODaysForYear(year);
       stats.remainingPTO = getRemainingPTODaysForYear(year);

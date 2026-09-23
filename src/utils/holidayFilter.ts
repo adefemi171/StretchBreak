@@ -2,22 +2,23 @@ import type { PublicHoliday } from './types';
 
 export const filterHolidaysByRegions = (
   holidays: PublicHoliday[],
-  selectedRegions: string[]
+  selectedRegions: string[],
+  excludedHolidayDates: string[] = []
 ): PublicHoliday[] => {
-  if (!selectedRegions || selectedRegions.length === 0) {
-    return holidays;
-  }
-  
   return holidays.filter(holiday => {
+    // Observances, bank/school and optional holidays do not imply a day off.
+    if (!holiday.types?.includes('Public') || excludedHolidayDates.includes(holiday.date)) {
+      return false;
+    }
     if (holiday.global) {
       return true;
     }
     
     if (holiday.counties && holiday.counties.length > 0) {
-      return holiday.counties.some(county => selectedRegions.includes(county));
+      return holiday.counties.some(county => selectedRegions?.includes(county));
     }
     
-    return true;
+    // Unknown regional scope is not evidence of a national entitlement.
+    return false;
   });
 };
-

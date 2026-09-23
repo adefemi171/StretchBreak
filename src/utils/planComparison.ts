@@ -32,7 +32,8 @@ export interface ComparisonResult {
 export const calculatePlanMetrics = (plan: HolidayPlan): PlanComparisonMetrics => {
   const { vacationDaysUsed, totalDaysOff } = calculateEfficiency(
     plan.vacationDays,
-    plan.publicHolidays
+      [...plan.publicHolidays, ...(plan.companyHolidays ?? [])],
+      plan.workDays
   );
   
   const efficiency = vacationDaysUsed > 0 ? totalDaysOff / vacationDaysUsed : 0;

@@ -23,13 +23,6 @@ const getMonthName = (month: number): string => {
   return names[month] || '';
 };
 
-const getMonthRangeLabel = (startMonth: number, endMonth: number): string => {
-  if (startMonth === endMonth) {
-    return getMonthName(startMonth);
-  }
-  return `${getMonthName(startMonth)}-${getMonthName(endMonth)}`;
-};
-
 const analyzeHolidayBridges = (holidays: PublicHoliday[]): CommunityInsight[] => {
   const insights: CommunityInsight[] = [];
   const monthClusters = new Map<number, PublicHoliday[]>();
@@ -107,7 +100,7 @@ const calculatePopularPeriods = (plans: HolidayPlan[]): PopularPeriod[] => {
   return periods;
 };
 
-const analyzeBestTimes = (plans: HolidayPlan[], holidays: PublicHoliday[]): CommunityInsight[] => {
+const analyzeBestTimes = (plans: HolidayPlan[]): CommunityInsight[] => {
   const insights: CommunityInsight[] = [];
 
   if (plans.length === 0) {
@@ -129,7 +122,8 @@ const analyzeBestTimes = (plans: HolidayPlan[], holidays: PublicHoliday[]): Comm
 
     const { vacationDaysUsed, totalDaysOff } = calculateEfficiency(
       plan.vacationDays,
-      plan.publicHolidays
+      [...plan.publicHolidays, ...(plan.companyHolidays ?? [])],
+      plan.workDays
     );
     const efficiency = vacationDaysUsed > 0 ? totalDaysOff / vacationDaysUsed : 0;
 
@@ -216,7 +210,7 @@ export const generateCommunityInsights = (
   const popularPeriods = calculatePopularPeriods(allPlans);
   
   const bridgeInsights = analyzeHolidayBridges(holidays);
-  const bestTimeInsights = analyzeBestTimes(allPlans, holidays);
+  const bestTimeInsights = analyzeBestTimes(allPlans);
   const patternInsights = analyzePatterns(allPlans);
 
   const allInsights = [

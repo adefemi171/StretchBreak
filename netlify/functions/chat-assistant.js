@@ -1,128 +1,31 @@
-import { OpenAI } from 'openai';
-import {
-  guardAIRequest,
-  jsonResponse,
-  reserveSpend,
-  commitUsage,
-  releaseReservation,
-  sanitizeUserText,
-  sanitizeHistory,
-  PROMPT_HARDENING,
-  MAX_MESSAGE_CHARS,
-  safeErrorResponse,
-  logServerError,
-} from './_shared/aiGuard.js';
-import { localDateString, upcomingHolidays } from './_shared/holidayDates.js';
-
-const MODEL = 'gpt-3.5-turbo';
+import { guardAIRequest, jsonResponse, safeErrorResponse, logServerError, PROMPT_HARDENING, sanitizeUserText, sanitizeHistory } from './_shared/aiGuard.js';
+import { parsePlanningContext, loadPlanningHolidays, buildCandidates, InputError } from './_shared/aiPlanning.js';
+import { complete, QuotaError } from './_shared/aiCompletion.js';
 
 export const handler = async (event) => {
   const blocked = await guardAIRequest(event);
   if (blocked) return blocked;
-
   const { body, cors } = event._aiGuard;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return jsonResponse(500, { error: 'AI is not configured' }, cors);
-  }
-
-  let reservedUsd = 0;
-
   try {
-    const message = sanitizeUserText(body.message, MAX_MESSAGE_CHARS);
-    if (!message.trim()) {
-      return jsonResponse(400, { error: 'Message is required' }, cors);
-    }
-
-    const reservation = await reserveSpend(MODEL);
-    if (!reservation.ok) {
-      return jsonResponse(
-        429,
-        {
-          error: `Monthly AI cost limit of $${reservation.limitUsd.toFixed(2)} reached. Try again next month or raise AI_MONTHLY_COST_LIMIT_USD.`,
-          code: 'AI_COST_LIMIT',
-          spentUsd: Number(reservation.spentUsd.toFixed(4)),
-          limitUsd: reservation.limitUsd,
-        },
-        cors
-      );
-    }
-    reservedUsd = reservation.reservedUsd;
-
-    const today = localDateString();
-    const year = Number.isFinite(body.year) ? body.year : new Date().getFullYear();
-    const countryCode = sanitizeUserText(String(body.countryCode || ''), 8);
-    const holidays = upcomingHolidays(body.holidays, { limit: 20, today });
-    const currentPlan = body.currentPlan;
-    const preferences = body.preferences;
-    const conversationHistory = sanitizeHistory(body.conversationHistory);
-
-    const openai = new OpenAI({ apiKey });
-
-    const holidaysList = holidays
-      .map((h) => `${sanitizeUserText(String(h?.date || ''), 32)}: ${sanitizeUserText(String(h?.localName || ''), 80)}`)
-      .join('\n');
-
-    const preferredMonths =
-      preferences?.preferredMonths && Array.isArray(preferences.preferredMonths)
-        ? preferences.preferredMonths.slice(0, 12).map((m) => Number(m)).filter(Number.isFinite)
-        : [];
-
-    const remainingInYear = year === new Date().getFullYear();
-    const nextYearHint = remainingInYear
-      ? `If few or no useful holidays remain after ${today} in ${year}, suggest planning into ${year + 1} and say so clearly.`
-      : '';
-
-    const systemPrompt = `${PROMPT_HARDENING}
-
-You help users plan vacations around public holidays.
-
-Today's date: ${today}
-Planning year: ${year}
-${countryCode ? `Country: ${countryCode}` : ''}
-Upcoming public holidays (on or after today only):
-${holidaysList || 'None remaining this year from the provided list'}
-${currentPlan && Array.isArray(currentPlan.vacationDays) ? `Current plan: ${Math.min(currentPlan.vacationDays.length, 365)} vacation days selected` : ''}
-${preferredMonths.length > 0 ? `User prefers months: ${preferredMonths.join(', ')}` : ''}
-
-Hard rules:
-- NEVER suggest vacation dates that start before today (${today}). Past holidays are out of scope.
-- Only recommend future bridge days / breaks using holidays on or after ${today}.
-- ${nextYearHint || 'Stay within the planning year unless the user asks otherwise.'}
-- If the user asks about "this year" and remaining options are weak, say what is left and offer next year's strongest bridges.
-
-Provide helpful, concise responses. Suggest optimal vacation periods, explain efficiency, and help users maximize their time off.`;
-
-    const messages = [{ role: 'system', content: systemPrompt }];
-    for (const msg of conversationHistory) {
-      messages.push({ role: msg.role, content: msg.content });
-    }
-    messages.push({ role: 'user', content: message });
-
-    const completion = await openai.chat.completions.create({
-      model: MODEL,
-      messages,
-      temperature: 0.7,
-      max_tokens: 800,
+    if (typeof body.message !== 'string' || !body.message.trim() || body.message.length > 2000) throw new InputError('Enter a message of up to 2,000 characters.');
+    const context = parsePlanningContext(body);
+    const holidays = await loadPlanningHolidays(context);
+    const candidates = buildCandidates(context, holidays).slice(0, 8);
+    const response = await complete(event, {
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: `${PROMPT_HARDENING} Provide concise guidance. Only discuss breaks from the calculated candidates. Explain that public-holiday eligibility depends on the employer and selected work region. Do not state a next working date or remaining PTO unless supplied in context. Respond as plain text.` },
+        { role: 'user', content: JSON.stringify({ planningContext: { year: context.year, countryCode: context.countryCode, workDays: context.workDays, remainingPTO: context.budget, companyHolidays: context.companyHolidays, holidays: holidays.filter(({ date }) => date >= context.startDate && date <= context.endDate).slice(0, 40).map(({ date, localName }) => ({ date, name: sanitizeUserText(localName, 80) })), candidates: candidates.map(({ startDate, endDate, vacationDaysUsed, totalDaysOff }) => ({ startDate, endDate, vacationDaysUsed, totalDaysOff })) } }) },
+        ...sanitizeHistory(body.conversationHistory),
+        { role: 'user', content: sanitizeUserText(body.message) },
+      ],
+      max_tokens: 700,
     });
-
-    const usage = completion.usage || {};
-    await commitUsage({
-      model: MODEL,
-      promptTokens: usage.prompt_tokens || 0,
-      completionTokens: usage.completion_tokens || 0,
-      reservedUsd,
-    });
-    reservedUsd = 0;
-
-    const response =
-      sanitizeUserText(completion.choices[0]?.message?.content || '', 8000) ||
-      'I apologize, I could not generate a response.';
-
-    return jsonResponse(200, { response }, cors);
+    return jsonResponse(200, { response: sanitizeUserText(response, 6000) }, cors);
   } catch (error) {
-    if (reservedUsd > 0) await releaseReservation(reservedUsd);
-    logServerError('chat-assistant', error);
-    return safeErrorResponse(500, cors);
+    if (error instanceof InputError) return jsonResponse(400, { error: error.message }, cors);
+    if (error instanceof QuotaError) return jsonResponse(429, { error: error.message, code: error.code }, { ...cors, 'Retry-After': '60' });
+    logServerError('chat', error);
+    return safeErrorResponse(503, cors);
   }
 };

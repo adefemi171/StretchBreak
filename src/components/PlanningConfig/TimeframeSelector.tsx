@@ -5,6 +5,7 @@ export type TimeframeType = 'calendar-year' | 'custom';
 interface TimeframeSelectorProps {
   type: TimeframeType;
   year?: number;
+  showYearSelect?: boolean;
   startDate?: string;
   endDate?: string;
   onTypeChange: (type: TimeframeType) => void;
@@ -16,6 +17,7 @@ interface TimeframeSelectorProps {
 export const TimeframeSelector = ({
   type,
   year,
+  showYearSelect = true,
   startDate,
   endDate,
   onTypeChange,
@@ -29,81 +31,28 @@ export const TimeframeSelector = ({
   
   return (
     <div className="timeframe-selector">
-      <label className="timeframe-label">Select Your Timeframe</label>
-      <p className="timeframe-subtitle">
-        Choose the time period you want to plan for
-      </p>
-      
-      <div className="timeframe-options">
-        <div
-          className={`timeframe-option ${type === 'calendar-year' ? 'selected' : ''}`}
-          onClick={() => onTypeChange('calendar-year')}
-        >
-          <input
-            type="radio"
-            name="timeframe"
-            checked={type === 'calendar-year'}
-            onChange={() => onTypeChange('calendar-year')}
-          />
-          <div className="timeframe-content">
-            <div className="timeframe-name">Calendar Year</div>
-            <div className="timeframe-description">Plan for a full calendar year (Jan 1 - Dec 31)</div>
-            {type === 'calendar-year' && (
-              <select
-                value={year || currentYear}
-                onChange={(e) => onYearChange(parseInt(e.target.value))}
-                className="year-select"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {years.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            )}
+      <label htmlFor="planning-timeframe" className="timeframe-label">Dates to consider</label>
+      <select id="planning-timeframe" value={type} onChange={event => onTypeChange(event.target.value as TimeframeType)} className="year-select">
+        <option value="calendar-year">Full calendar year</option>
+        <option value="custom">Custom date range</option>
+      </select>
+      {type === 'calendar-year' && showYearSelect && (
+        <select aria-label="Planning year" value={year || currentYear} onChange={event => onYearChange(Number(event.target.value))} className="year-select">
+          {years.map(item => <option key={item} value={item}>{item}</option>)}
+        </select>
+      )}
+      {type === 'custom' && (
+        <div className="custom-dates">
+          <div className="date-input-group">
+            <label htmlFor="planning-start">Start date</label>
+            <input type="date" id="planning-start" value={startDate || ''} onChange={event => onStartDateChange(event.target.value)} className="date-input" />
+          </div>
+          <div className="date-input-group">
+            <label htmlFor="planning-end">End date</label>
+            <input type="date" id="planning-end" value={endDate || ''} onChange={event => onEndDateChange(event.target.value)} className="date-input" min={startDate || undefined} />
           </div>
         </div>
-        
-        <div
-          className={`timeframe-option ${type === 'custom' ? 'selected' : ''}`}
-          onClick={() => onTypeChange('custom')}
-        >
-          <input
-            type="radio"
-            name="timeframe"
-            checked={type === 'custom'}
-            onChange={() => onTypeChange('custom')}
-          />
-          <div className="timeframe-content">
-            <div className="timeframe-name">12-Month Period</div>
-            <div className="timeframe-description">Choose your start month and year</div>
-            {type === 'custom' && (
-              <div className="custom-dates">
-                <div className="date-input-group">
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={startDate || ''}
-                    onChange={(e) => onStartDateChange(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="date-input"
-                  />
-                </div>
-                <div className="date-input-group">
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={endDate || ''}
-                    onChange={(e) => onEndDateChange(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="date-input"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
-

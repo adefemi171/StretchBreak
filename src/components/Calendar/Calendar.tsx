@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { addMonths, subMonths, startOfMonth, parseISO, isSameMonth } from 'date-fns';
+import { useState } from 'react';
+import { addMonths, subMonths, startOfMonth, parseISO } from 'date-fns';
 import type { PublicHoliday, CompanyHoliday } from '../../utils/types';
 import { CalendarMonth } from './CalendarMonth';
 import './Calendar.css';
@@ -13,9 +13,16 @@ interface CalendarProps {
   year: number;
   initialMonth?: Date;
   focusOnDates?: string[];
+  workDays?: number[];
+  readOnly?: boolean;
 }
 
-export const Calendar = ({
+export const Calendar = (props: CalendarProps) => {
+  const firstDate = [...(props.focusOnDates || [])].sort()[0] || '';
+  return <CalendarView key={`${props.year}-${firstDate}-${props.initialMonth?.getTime() || ''}`} {...props} />;
+};
+
+const CalendarView = ({
   selectedDates,
   suggestedDates,
   holidays,
@@ -24,6 +31,8 @@ export const Calendar = ({
   year,
   initialMonth,
   focusOnDates,
+  workDays = [1, 2, 3, 4, 5],
+  readOnly = false,
 }: CalendarProps) => {
   const getInitialMonth = () => {
     if (initialMonth) {
@@ -34,33 +43,12 @@ export const Calendar = ({
       const firstDate = parseISO(sortedDates[0]);
       return startOfMonth(firstDate);
     }
-    return new Date(year, 0, 1);
+    return new Date(year, year === new Date().getFullYear() ? new Date().getMonth() : 0, 1);
   };
 
   const [currentMonth, setCurrentMonth] = useState(getInitialMonth());
-  const [viewMode, setViewMode] = useState<'single' | 'triple'>('single');
+  const [viewMode, setViewMode] = useState<'single' | 'triple' | 'agenda'>('single');
 
-  useEffect(() => {
-    const newMonth = getInitialMonth();
-    if (!isSameMonth(currentMonth, newMonth)) {
-      setCurrentMonth(newMonth);
-    }
-    
-    if (focusOnDates && focusOnDates.length > 0) {
-      const sortedDates = [...focusOnDates].sort();
-      const firstDate = parseISO(sortedDates[0]);
-      const lastDate = parseISO(sortedDates[sortedDates.length - 1]);
-      const firstMonth = startOfMonth(firstDate);
-      const lastMonth = startOfMonth(lastDate);
-      
-      if (!isSameMonth(firstMonth, lastMonth)) {
-        setViewMode('triple');
-      } else {
-        setViewMode('single');
-      }
-    }
-  }, [focusOnDates, initialMonth, year]);
-  
   const handlePreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
   };
@@ -75,7 +63,7 @@ export const Calendar = ({
   
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const monthIndex = parseInt(e.target.value);
-    setCurrentMonth(new Date(year, monthIndex, 1));
+    setCurrentMonth(new Date(currentMonth.getFullYear(), monthIndex, 1));
   };
   
   // Show 1 or 3 months based on view mode
@@ -96,10 +84,11 @@ export const Calendar = ({
     <div className="calendar-container">
       <div className="calendar-controls">
         <div className="calendar-nav-group">
-          <button onClick={handlePreviousMonth} className="nav-button" title="Previous month">
+          <button onClick={handlePreviousMonth} className="nav-button" title="Previous month" aria-label="Previous month">
             ←
           </button>
           <select
+            aria-label="Calendar month"
             value={currentMonth.getMonth()}
             onChange={handleMonthChange}
             className="month-select"
@@ -110,16 +99,17 @@ export const Calendar = ({
               </option>
             ))}
           </select>
-          <button onClick={handleNextMonth} className="nav-button" title="Next month">
+          <button onClick={handleNextMonth} className="nav-button" title="Next month" aria-label="Next month">
             →
           </button>
-          <button onClick={handleToday} className="nav-button today-button" title="Go to today">
+          <button disabled={year !== new Date().getFullYear()} onClick={handleToday} className="nav-button today-button" title="Go to today">
             Today
           </button>
         </div>
         <div className="view-toggle">
           <button
             onClick={() => setViewMode('single')}
+            aria-pressed={viewMode === 'single'}
             className={`view-button ${viewMode === 'single' ? 'active' : ''}`}
             title="Single month view"
           >
@@ -127,18 +117,36 @@ export const Calendar = ({
           </button>
           <button
             onClick={() => setViewMode('triple')}
+            aria-pressed={viewMode === 'triple'}
             className={`view-button ${viewMode === 'triple' ? 'active' : ''}`}
             title="Three months view"
           >
             3 Months
           </button>
+          <button type="button" aria-pressed={viewMode === 'agenda'} onClick={() => setViewMode('agenda')} className={`view-button ${viewMode === 'agenda' ? 'active' : ''}`}>Agenda</button>
         </div>
       </div>
-      <div className="calendar-months">
+      {viewMode === 'agenda' ? (
+        <div className="calendar-agenda" aria-label="Leave and holidays">
+          {[...new Set([...selectedDates, ...holidays.map(h => h.date), ...companyHolidays.map(h => h.date)])].sort().map(date => (
+            <p key={date}><time dateTime={date}>{parseISO(date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</time> — {[selectedDates.includes(date) ? 'Selected leave' : '', ...holidays.filter(h => h.date === date).map(h => h.localName), ...companyHolidays.filter(h => h.date === date).map(h => h.name)].filter(Boolean).join(', ')}</p>
+          ))}
+          {selectedDates.length + holidays.length + companyHolidays.length === 0 && <p>No leave or holidays to display.</p>}
+        </div>
+      ) : <div className="calendar-months">
         {months.map((month) => (
           <CalendarMonth
             key={`${month.getFullYear()}-${month.getMonth()}`}
             date={month}
+            workDays={workDays}
+            readOnly={readOnly}
+            onNavigateDate={(date) => {
+              setCurrentMonth(startOfMonth(date));
+              requestAnimationFrame(() => {
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                document.querySelector<HTMLButtonElement>(`[data-calendar-date="${key}"]`)?.focus();
+              });
+            }}
             selectedDates={selectedDates}
             suggestedDates={suggestedDates}
             holidays={holidays}
@@ -146,7 +154,7 @@ export const Calendar = ({
             onDateClick={onDateClick}
           />
         ))}
-      </div>
+      </div>}
       <div className="calendar-legend">
         <div className="legend-item">
           <div className="legend-color holiday"></div>
@@ -166,7 +174,7 @@ export const Calendar = ({
         </div>
         <div className="legend-item">
           <div className="legend-color weekend"></div>
-          <span>Weekend</span>
+          <span>Non-working day</span>
         </div>
       </div>
     </div>

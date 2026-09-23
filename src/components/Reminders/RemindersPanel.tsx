@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { ReminderSettings } from '../../utils/types';
 import { 
   getReminderSettings, 
@@ -10,26 +10,15 @@ import {
 import './RemindersPanel.css';
 
 export const RemindersPanel = () => {
-  const [settings, setSettings] = useState<ReminderSettings>(getReminderSettings());
-  const [reminders, setReminders] = useState<UpcomingReminder[]>([]);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-    loadReminders();
-  }, [settings.enabled]);
-
-  const loadReminders = () => {
-    const upcoming = getUpcomingReminders();
-    setReminders(upcoming);
-  };
+  const [settings, setSettings] = useState<ReminderSettings>(getReminderSettings);
+  const [reminders, setReminders] = useState<UpcomingReminder[]>(getUpcomingReminders);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => 'Notification' in window ? Notification.permission : 'default');
 
   const handleToggleEnabled = () => {
     const newSettings = { ...settings, enabled: !settings.enabled };
     setSettings(newSettings);
     saveReminderSettings(newSettings);
+    setReminders(getUpcomingReminders());
   };
 
   const handleDaysChange = (days: number) => {
@@ -41,6 +30,7 @@ export const RemindersPanel = () => {
     const newSettings = { ...settings, daysBeforeVacation: newDays };
     setSettings(newSettings);
     saveReminderSettings(newSettings);
+    setReminders(getUpcomingReminders());
   };
 
   const handlePTODeadlineChange = (value: string) => {
@@ -48,6 +38,7 @@ export const RemindersPanel = () => {
     const newSettings = { ...settings, ptoRequestDeadlineDays: days };
     setSettings(newSettings);
     saveReminderSettings(newSettings);
+    setReminders(getUpcomingReminders());
   };
 
   const handleBookingWindowChange = (value: string) => {
@@ -55,6 +46,7 @@ export const RemindersPanel = () => {
     const newSettings = { ...settings, bookingWindowDays: days };
     setSettings(newSettings);
     saveReminderSettings(newSettings);
+    setReminders(getUpcomingReminders());
   };
 
   const handleRequestPermission = async () => {

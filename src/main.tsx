@@ -18,10 +18,10 @@ createRoot(rootElement).render(
 )
 
 // Register service worker for PWA support
-if ('serviceWorker' in navigator) {
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/sw.js', { updateViaCache: 'none' })
       .then((registration) => {
         setInterval(() => {
           registration.update();
@@ -31,4 +31,14 @@ if ('serviceWorker' in navigator) {
         // SW registration failed — app still works online
       });
   });
+}
+
+// Remove a production worker left on a development origin before Vite runs.
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(
+    registrations.filter(registration => {
+      const script = registration.active?.scriptURL || registration.waiting?.scriptURL;
+      return script && new URL(script).origin === location.origin && new URL(script).pathname === '/sw.js';
+    }).map(registration => registration.unregister())
+  )).catch(() => {});
 }

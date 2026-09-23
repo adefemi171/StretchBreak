@@ -38,3 +38,7 @@
   cursor: not-allowed;
   background-color: var(--surface);
 }
+
+.region-selector-dropdown { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.region-select { min-width: 0; max-width: 100%; flex: 1 1 160px; }
+.region-help { flex-basis: 100%; color: var(--ink-soft); font-size: 0.75rem; }

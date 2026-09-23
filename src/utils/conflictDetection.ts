@@ -1,4 +1,5 @@
-import { parseISO, format, isWeekend, addDays, subDays } from 'date-fns';
+import { parseISO, format, addDays, subDays } from 'date-fns';
+import { isWeekendDay } from './dateUtils';
 import type { PublicHoliday, CompanyHoliday } from './types';
 
 export interface HolidayConflict {
@@ -72,7 +73,8 @@ export const suggestAlternativeDates = (
   publicHolidays: PublicHoliday[],
   companyHolidays: CompanyHoliday[] = [],
   usedDates: Set<string> = new Set(),
-  windowDays: number = 7
+  windowDays: number = 7,
+  workDays?: number[]
 ): string[] => {
   if (conflictDates.length === 0) return [];
 
@@ -96,7 +98,7 @@ export const suggestAlternativeDates = (
       const beforeStr = format(before, 'yyyy-MM-dd');
 
       if (
-        !isWeekend(before) &&
+        !isWeekendDay(before, workDays) &&
         !holidayDates.has(beforeStr) &&
         !usedDates.has(beforeStr) &&
         !suggestions.includes(beforeStr)
@@ -110,7 +112,7 @@ export const suggestAlternativeDates = (
       const afterStr = format(after, 'yyyy-MM-dd');
 
       if (
-        !isWeekend(after) &&
+        !isWeekendDay(after, workDays) &&
         !holidayDates.has(afterStr) &&
         !usedDates.has(afterStr) &&
         !suggestions.includes(afterStr)
@@ -131,7 +133,8 @@ export const analyzeConflicts = (
   vacationDays: string[],
   publicHolidays: PublicHoliday[],
   companyHolidays: CompanyHoliday[] = [],
-  usedDates: Set<string> = new Set()
+  usedDates: Set<string> = new Set(),
+  workDays?: number[]
 ): ConflictAnalysis => {
   const holidayConflicts = detectHolidayConflicts(
     vacationDays,
@@ -146,7 +149,9 @@ export const analyzeConflicts = (
         conflictDates,
         publicHolidays,
         companyHolidays,
-        usedDates
+        usedDates,
+        7,
+        workDays
       )
     : [];
 

@@ -8,7 +8,7 @@ export const localDateString = (date = new Date()) => {
 
 /**
  * Keep holidays on/after today, sorted ascending.
- * Falls back to all holidays (sorted) if none remain in the current year.
+ * Never falls back to past holidays when no upcoming holidays remain.
  */
 export const upcomingHolidays = (holidays, { limit = 20, today = localDateString() } = {}) => {
   const list = Array.isArray(holidays) ? holidays : [];
@@ -22,6 +22,5 @@ export const upcomingHolidays = (holidays, { limit = 20, today = localDateString
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const future = normalized.filter((h) => h.date >= today);
-  const source = future.length > 0 ? future : normalized;
-  return source.slice(0, limit);
+  return future.slice(0, limit);
 };

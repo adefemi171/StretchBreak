@@ -1,281 +1,142 @@
 import type { PublicHoliday, PlanSuggestion } from './types';
-import { parseISO, addDays, subDays, isWeekend, format, getDay, eachDayOfInterval } from 'date-fns';
+import { parseISO, addDays, subDays, format, eachDayOfInterval, differenceInCalendarDays } from 'date-fns';
+import { isWeekendDay } from './dateUtils';
+import { isSafeIsoDate } from './importValidation';
 
-export const findOptimalVacationPeriods = (
-  holidays: PublicHoliday[],
-  _year: number
-): PlanSuggestion[] => {
-  const suggestions: PlanSuggestion[] = [];
-  const suggestionKeys = new Set<string>();
-  
-  const sortedHolidays = [...holidays]
-    .map(h => ({ ...h, dateObj: parseISO(h.date) }))
-    .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-  
-  for (let i = 0; i < sortedHolidays.length; i++) {
-    const holiday = sortedHolidays[i];
-    const holidayDate = holiday.dateObj;
-    const dayOfWeek = getDay(holidayDate);
-    
-    if (dayOfWeek === 4) {
-      const thursday = holidayDate;
-      const friday = addDays(thursday, 1);
-      const fridayIsHoliday = sortedHolidays.some(h => 
-        format(h.dateObj, 'yyyy-MM-dd') === format(friday, 'yyyy-MM-dd')
-      );
-      const fridayIsWeekend = isWeekend(friday);
-      
-      const monday = subDays(thursday, 3);
-      const wednesday = subDays(thursday, 1);
-      
-      const baseVacationDays = [];
-      let current = monday;
-      while (current <= wednesday) {
-        if (!isWeekend(current)) {
-          baseVacationDays.push(format(current, 'yyyy-MM-dd'));
-        }
-        current = addDays(current, 1);
-      }
-      
-      if (fridayIsHoliday || fridayIsWeekend) {
-        const totalDaysOff = baseVacationDays.length + 1 + 1 + 2;
-        const efficiency = totalDaysOff / baseVacationDays.length;
-        const startDateStr = format(monday, 'yyyy-MM-dd');
-        const endDateStr = format(friday, 'yyyy-MM-dd');
-        const suggestionKey = `${startDateStr}-${endDateStr}`;
-        
-        if (!suggestionKeys.has(suggestionKey)) {
-          suggestionKeys.add(suggestionKey);
-          suggestions.push({
-            startDate: startDateStr,
-            endDate: endDateStr,
-            vacationDaysUsed: baseVacationDays.length,
-            totalDaysOff,
-            efficiency,
-            reason: `Bridge Mon-Wed before ${holiday.localName} (Thu-Fri)`,
-            publicHolidaysIncluded: [holiday, ...(fridayIsHoliday ? sortedHolidays.filter(h => 
-              format(h.dateObj, 'yyyy-MM-dd') === format(friday, 'yyyy-MM-dd')
-            ) : [])],
-          });
-        }
-      } else {
-        const conservativeStartDateStr = format(monday, 'yyyy-MM-dd');
-        const conservativeEndDateStr = format(thursday, 'yyyy-MM-dd');
-        const conservativeKey = `${conservativeStartDateStr}-${conservativeEndDateStr}`;
-        
-        if (!suggestionKeys.has(conservativeKey)) {
-          suggestionKeys.add(conservativeKey);
-          suggestions.push({
-            startDate: conservativeStartDateStr,
-            endDate: conservativeEndDateStr,
-            vacationDaysUsed: baseVacationDays.length,
-            totalDaysOff: baseVacationDays.length + 1,
-            efficiency: (baseVacationDays.length + 1) / baseVacationDays.length,
-            reason: `Bridge Mon-Wed before ${holiday.localName} (Thursday) - 4-day break`,
-            publicHolidaysIncluded: [holiday],
-          });
-        }
-        
-        const extendedVacationDays = [...baseVacationDays, format(friday, 'yyyy-MM-dd')];
-        const extendedStartDateStr = format(monday, 'yyyy-MM-dd');
-        const extendedEndDateStr = format(friday, 'yyyy-MM-dd');
-        const extendedKey = `${extendedStartDateStr}-${extendedEndDateStr}`;
-        
-        if (!suggestionKeys.has(extendedKey)) {
-          suggestionKeys.add(extendedKey);
-          suggestions.push({
-            startDate: extendedStartDateStr,
-            endDate: extendedEndDateStr,
-            vacationDaysUsed: extendedVacationDays.length,
-            totalDaysOff: extendedVacationDays.length + 1 + 2,
-            efficiency: (extendedVacationDays.length + 1 + 2) / extendedVacationDays.length,
-            reason: `Bridge Mon-Wed + Fri before ${holiday.localName} (Thursday) - 6-day break`,
-            publicHolidaysIncluded: [holiday],
-          });
-        }
-      }
-    }
-    
-    if (dayOfWeek === 5) {
-      const friday = holidayDate;
-      const monday = subDays(friday, 4);
-      const thursday = subDays(friday, 1);
-      const mondayIsHoliday = sortedHolidays.some(h => 
-        format(h.dateObj, 'yyyy-MM-dd') === format(monday, 'yyyy-MM-dd')
-      );
-      
-      if (!mondayIsHoliday) {
-        const vacationDays = [];
-        let current = monday;
-        while (current <= thursday) {
-          if (!isWeekend(current)) {
-            vacationDays.push(format(current, 'yyyy-MM-dd'));
-          }
-          current = addDays(current, 1);
-        }
-        
-        const totalDaysOff = vacationDays.length + 1;
-        const efficiency = totalDaysOff / vacationDays.length;
-        
-        const startDateStr = format(monday, 'yyyy-MM-dd');
-        const endDateStr = format(friday, 'yyyy-MM-dd');
-        const suggestionKey = `${startDateStr}-${endDateStr}`;
-        
-        if (!suggestionKeys.has(suggestionKey)) {
-          suggestionKeys.add(suggestionKey);
-          suggestions.push({
-            startDate: startDateStr,
-            endDate: endDateStr,
-            vacationDaysUsed: vacationDays.length,
-            totalDaysOff,
-            efficiency,
-            reason: `Bridge Mon-Thu before ${holiday.localName} (Friday)`,
-            publicHolidaysIncluded: [holiday],
-          });
-        }
-      }
-    }
-    
-    if (dayOfWeek === 2) {
-      const tuesday = holidayDate;
-      const monday = subDays(tuesday, 1);
-      
-      if (!isWeekend(monday)) {
-        const startDateStr = format(monday, 'yyyy-MM-dd');
-        const endDateStr = format(tuesday, 'yyyy-MM-dd');
-        const suggestionKey = `${startDateStr}-${endDateStr}`;
-        
-        if (!suggestionKeys.has(suggestionKey)) {
-          suggestionKeys.add(suggestionKey);
-          suggestions.push({
-            startDate: startDateStr,
-            endDate: endDateStr,
-            vacationDaysUsed: 1,
-            totalDaysOff: 2,
-            efficiency: 2,
-            reason: `Take Monday before ${holiday.localName} (Tuesday)`,
-            publicHolidaysIncluded: [holiday],
-          });
-        }
-      }
-    }
-    
-    if (i < sortedHolidays.length - 1) {
-      const nextHoliday = sortedHolidays[i + 1];
-      const daysBetween = Math.round(
-        (nextHoliday.dateObj.getTime() - holidayDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      
-      if (daysBetween === 1) {
-        const firstDay = holidayDate;
-        const secondDay = nextHoliday.dateObj;
-        const firstDayOfWeek = getDay(firstDay);
-        const secondDayOfWeek = getDay(secondDay);
-        
-        if (firstDayOfWeek === 4 && secondDayOfWeek === 5) {
-          const monday = subDays(firstDay, 3);
-          const wednesday = subDays(firstDay, 1);
-          
-          const vacationDays = [];
-          let current = monday;
-          while (current <= wednesday) {
-            if (!isWeekend(current)) {
-              vacationDays.push(format(current, 'yyyy-MM-dd'));
-            }
-            current = addDays(current, 1);
-          }
-          
-          const totalDaysOff = vacationDays.length + 2;
-          const efficiency = totalDaysOff / vacationDays.length;
-          
-          const startDateStr = format(monday, 'yyyy-MM-dd');
-          const endDateStr = format(secondDay, 'yyyy-MM-dd');
-          const suggestionKey = `${startDateStr}-${endDateStr}`;
-          
-          if (!suggestionKeys.has(suggestionKey)) {
-            suggestionKeys.add(suggestionKey);
-            suggestions.push({
-              startDate: startDateStr,
-              endDate: endDateStr,
-              vacationDaysUsed: vacationDays.length,
-              totalDaysOff,
-              efficiency,
-              reason: `Bridge Mon-Wed before consecutive holidays (Thu-Fri)`,
-              publicHolidaysIncluded: [holiday, nextHoliday],
-            });
-          }
-        }
-      }
-    }
+type HolidayDate = { date: string };
+export interface VacationBreak {
+  startDate: string;
+  endDate: string;
+  leaveDates: string[];
+  totalDaysOff: number;
+}
+
+export const getLeaveDates = (
+  startDate: string,
+  endDate: string,
+  holidays: HolidayDate[],
+  workDays?: number[],
+): string[] => {
+  if (!isSafeIsoDate(startDate) || !isSafeIsoDate(endDate) || startDate > endDate) return [];
+  const start = parseISO(startDate);
+  const end = parseISO(endDate);
+  if (differenceInCalendarDays(end, start) > 3 * 366) return [];
+  const holidayDates = new Set(holidays.map(h => h.date));
+  return eachDayOfInterval({ start, end })
+    .filter(date => !isWeekendDay(date, workDays) && !holidayDates.has(format(date, 'yyyy-MM-dd')))
+    .map(date => format(date, 'yyyy-MM-dd'));
+};
+
+/** Count only actual connected breaks. An unselected working day always splits a break. */
+export const getVacationBreaks = (
+  vacationDays: string[],
+  holidays: HolidayDate[],
+  workDays?: number[],
+): VacationBreak[] => {
+  const holidayDates = new Set(holidays.filter(h => isSafeIsoDate(h.date)).map(h => h.date));
+  const leaveDates = [...new Set(vacationDays.filter(isSafeIsoDate))]
+    .filter(date => !isWeekendDay(date, workDays) && !holidayDates.has(date)).sort();
+  const selected = new Set(leaveDates);
+  const isOff = (date: Date) => {
+    const key = format(date, 'yyyy-MM-dd');
+    return selected.has(key) || holidayDates.has(key) || isWeekendDay(date, workDays);
+  };
+  const breaks: VacationBreak[] = [];
+  for (const date of leaveDates) {
+    if (breaks.length && date <= breaks[breaks.length - 1].endDate) continue;
+    let start = parseISO(date);
+    let end = start;
+    while (isOff(subDays(start, 1))) start = subDays(start, 1);
+    while (isOff(addDays(end, 1))) end = addDays(end, 1);
+    const startDate = format(start, 'yyyy-MM-dd');
+    const endDate = format(end, 'yyyy-MM-dd');
+    breaks.push({
+      startDate, endDate,
+      leaveDates: leaveDates.filter(day => day >= startDate && day <= endDate),
+      totalDaysOff: differenceInCalendarDays(end, start) + 1,
+    });
   }
-  
-  const sorted = suggestions.sort((a, b) => {
-    if (b.totalDaysOff !== a.totalDaysOff) {
-      return b.totalDaysOff - a.totalDaysOff;
-    }
-    return a.vacationDaysUsed - b.vacationDaysUsed;
-  });
-  
-  const topSuggestions = sorted.slice(0, 10);
-  return topSuggestions.sort((a, b) => {
-    const dateA = parseISO(a.startDate);
-    const dateB = parseISO(b.startDate);
-    return dateA.getTime() - dateB.getTime();
-  });
+  return breaks;
 };
 
 export const calculateEfficiency = (
   vacationDays: string[],
-  holidays: PublicHoliday[]
+  holidays: HolidayDate[],
+  workDays?: number[],
 ): { vacationDaysUsed: number; totalDaysOff: number } => {
-  const vacationDaysUsed = vacationDays.length;
-  
-  if (vacationDays.length === 0) {
-    return { vacationDaysUsed: 0, totalDaysOff: 0 };
-  }
-  
-  const sortedDates = [...vacationDays].sort();
-  let startDate = parseISO(sortedDates[0]);
-  let endDate = parseISO(sortedDates[sortedDates.length - 1]);
-  
-  let checkDate = subDays(startDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
-    
-    if (isHoliday || isWeekendDay) {
-      startDate = checkDate;
-      checkDate = subDays(checkDate, 1);
-    } else {
-      break;
-    }
-  }
-  
-  checkDate = addDays(endDate, 1);
-  while (true) {
-    const dateStr = format(checkDate, 'yyyy-MM-dd');
-    const isHoliday = holidays.some(h => h.date === dateStr);
-    const isWeekendDay = isWeekend(checkDate);
-    
-    if (isHoliday || isWeekendDay) {
-      endDate = checkDate;
-      checkDate = addDays(checkDate, 1);
-    } else {
-      break;
-    }
-  }
-  
-  const allDaysInRange = eachDayOfInterval({ start: startDate, end: endDate });
-  const allDaysSet = new Set<string>();
-  
-  allDaysInRange.forEach(day => {
-    const dateStr = format(day, 'yyyy-MM-dd');
-    allDaysSet.add(dateStr);
-  });
-  
-  const totalDaysOff = allDaysSet.size;
-  
-  return { vacationDaysUsed, totalDaysOff };
+  const breaks = getVacationBreaks(vacationDays, holidays, workDays);
+  return {
+    vacationDaysUsed: breaks.reduce((sum, period) => sum + period.leaveDates.length, 0),
+    totalDaysOff: breaks.reduce((sum, period) => sum + period.totalDaysOff, 0),
+  };
 };
 
+/** Recompute all dates and claims; never trust numbers received from an external suggestion. */
+export const normalizeSuggestion = (
+  suggestion: PlanSuggestion,
+  holidays: PublicHoliday[],
+  workDays?: number[],
+): PlanSuggestion | null => {
+  const leaveDates = getLeaveDates(suggestion.startDate, suggestion.endDate, holidays, workDays);
+  const breaks = getVacationBreaks(leaveDates, holidays, workDays);
+  if (breaks.length !== 1) return null;
+  const period = breaks[0];
+  return {
+    ...suggestion,
+    startDate: period.startDate,
+    endDate: period.endDate,
+    leaveDates,
+    vacationDaysUsed: leaveDates.length,
+    totalDaysOff: period.totalDaysOff,
+    efficiency: period.totalDaysOff / leaveDates.length,
+    publicHolidaysIncluded: holidays.filter(h => h.date >= period.startDate && h.date <= period.endDate),
+  };
+};
+
+/** Explore windows around every holiday without assuming a Monday-Friday workweek. */
+export const generateVacationCandidates = (
+  holidays: PublicHoliday[],
+  startDate: string,
+  endDate: string,
+  workDays?: number[],
+): PlanSuggestion[] => {
+  if (!isSafeIsoDate(startDate) || !isSafeIsoDate(endDate) || startDate > endDate) return [];
+  const unique = new Map<string, PlanSuggestion>();
+  for (const holiday of holidays) {
+    if (!isSafeIsoDate(holiday.date) || holiday.date < startDate || holiday.date > endDate) continue;
+    for (let before = 0; before <= 14; before++) {
+      for (let after = 0; after <= 14 && before + after <= 20; after++) {
+        const first = format(subDays(parseISO(holiday.date), before), 'yyyy-MM-dd');
+        const last = format(addDays(parseISO(holiday.date), after), 'yyyy-MM-dd');
+        if (first < startDate || last > endDate) continue;
+        const suggestion = normalizeSuggestion({
+          startDate: first, endDate: last, vacationDaysUsed: 0, totalDaysOff: 0, efficiency: 0,
+          reason: `Break around ${holiday.localName || holiday.name}`,
+          publicHolidaysIncluded: [],
+        }, holidays, workDays);
+        if (!suggestion || suggestion.startDate < startDate || suggestion.endDate > endDate) continue;
+        unique.set(`${suggestion.startDate}/${suggestion.endDate}`, suggestion);
+      }
+    }
+  }
+  return [...unique.values()].sort((a, b) => b.efficiency - a.efficiency || b.totalDaysOff - a.totalDaysOff || a.startDate.localeCompare(b.startDate));
+};
+
+export const findOptimalVacationPeriods = (holidays: PublicHoliday[], year: number, workDays?: number[]): PlanSuggestion[] =>
+  generateVacationCandidates(holidays, `${year}-01-01`, `${year}-12-31`, workDays)
+    .slice(0, 20).sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+export interface CarryoverBudget { days: number; expiryMonth: number; year: number }
+
+/** availablePTODays includes remaining carryover; only eligible actual leave can consume it. */
+export const canAllocateLeaveDates = (
+  dates: string[], availablePTODays: number, carryover?: CarryoverBudget,
+): boolean => {
+  const unique = [...new Set(dates.filter(isSafeIsoDate))];
+  const carryoverDays = carryover && carryover.expiryMonth >= 1 && carryover.expiryMonth <= 12
+    ? Math.max(0, Math.min(availablePTODays, carryover.days)) : 0;
+  const eligible = carryoverDays && carryover ? unique.filter(date =>
+    Number(date.slice(0, 4)) === carryover.year && Number(date.slice(5, 7)) <= carryover.expiryMonth).length : 0;
+  const annualNeeded = unique.length - Math.min(carryoverDays, eligible);
+  return annualNeeded <= Math.max(0, availablePTODays - carryoverDays);
+};

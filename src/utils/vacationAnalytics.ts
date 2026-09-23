@@ -1,6 +1,6 @@
 import type { HolidayPlan } from './types';
-import { calculateEfficiency } from './planningAlgorithm';
-import { parseISO, getMonth, getYear } from 'date-fns';
+import { calculateEfficiency, getVacationBreaks } from './planningAlgorithm';
+import { parseISO, getMonth, eachDayOfInterval, format } from 'date-fns';
 
 export interface YearStats {
   year: number;
@@ -57,23 +57,20 @@ export const calculateYearStats = (plans: HolidayPlan[]): YearStats[] => {
   const yearStats: YearStats[] = [];
   
   yearMap.forEach((yearPlans, year) => {
-    let totalPTO = 0;
-    let totalDaysOff = 0;
-    let totalEfficiency = 0;
-    
+    const uniqueLeave = new Set<string>();
+    const uniqueDaysOff = new Set<string>();
     yearPlans.forEach(plan => {
-      const { vacationDaysUsed, totalDaysOff: daysOff } = calculateEfficiency(
-        plan.vacationDays,
-        plan.publicHolidays
-      );
-      totalPTO += vacationDaysUsed;
-      totalDaysOff += daysOff;
-      const efficiency = vacationDaysUsed > 0 ? daysOff / vacationDaysUsed : 0;
-      totalEfficiency += efficiency;
+      const breaks = getVacationBreaks(plan.vacationDays, [...plan.publicHolidays, ...(plan.companyHolidays ?? [])], plan.workDays);
+      for (const period of breaks) {
+        period.leaveDates.forEach(date => uniqueLeave.add(date));
+        eachDayOfInterval({ start: parseISO(period.startDate), end: parseISO(period.endDate) })
+          .forEach(date => uniqueDaysOff.add(format(date, 'yyyy-MM-dd')));
+      }
     });
-    
-    const avgEfficiency = yearPlans.length > 0 ? totalEfficiency / yearPlans.length : 0;
-    
+    const totalPTO = uniqueLeave.size;
+    const totalDaysOff = uniqueDaysOff.size;
+    const avgEfficiency = totalPTO > 0 ? totalDaysOff / totalPTO : 0;
+
     yearStats.push({
       year,
       ptoUsed: totalPTO,
@@ -98,13 +95,16 @@ export const calculateMonthDistribution = (plans: HolidayPlan[]): MonthDistribut
     monthMap.set(i, { days: 0, planSet: new Set() });
   }
   
+  const seenDates = new Set<string>();
   plans.forEach(plan => {
     plan.vacationDays.forEach(dateStr => {
       try {
         const date = parseISO(dateStr);
         const month = getMonth(date);
         const current = monthMap.get(month)!;
-        current.days += 1;
+        if (!current) return;
+        if (!seenDates.has(dateStr)) current.days += 1;
+        seenDates.add(dateStr);
         current.planSet.add(plan.id);
       } catch {
         // Skip invalid dates
@@ -131,7 +131,8 @@ export const calculateEfficiencyTrend = (plans: HolidayPlan[]): EfficiencyTrend[
   const trends = plans.map(plan => {
     const { vacationDaysUsed, totalDaysOff } = calculateEfficiency(
       plan.vacationDays,
-      plan.publicHolidays
+      [...plan.publicHolidays, ...(plan.companyHolidays ?? [])],
+      plan.workDays
     );
     const efficiency = vacationDaysUsed > 0 ? totalDaysOff / vacationDaysUsed : 0;
     
@@ -233,11 +234,11 @@ export const calculateUtilizationRate = (
 ): number | undefined => {
   if (!totalAvailablePTO || totalAvailablePTO <= 0) return undefined;
   
-  const totalUsed = plans.reduce((sum, plan) => {
-    const { vacationDaysUsed } = calculateEfficiency(plan.vacationDays, plan.publicHolidays);
-    return sum + vacationDaysUsed;
-  }, 0);
-  
+  const leave = new Set<string>();
+  plans.forEach(plan => getVacationBreaks(plan.vacationDays, [...plan.publicHolidays, ...(plan.companyHolidays ?? [])], plan.workDays)
+    .forEach(period => period.leaveDates.forEach(date => leave.add(date))));
+  const totalUsed = leave.size;
+
   return totalUsed / totalAvailablePTO;
 };
 

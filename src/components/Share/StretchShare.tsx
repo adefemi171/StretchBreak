@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { calculateEfficiency } from '../../utils/planningAlgorithm';
+import { calculateEfficiency, getVacationBreaks } from '../../utils/planningAlgorithm';
 import { formatDateDisplay } from '../../utils/dateUtils';
 import type { PublicHoliday } from '../../utils/types';
 import './StretchShare.css';
@@ -9,6 +9,7 @@ interface StretchShareProps {
   holidays: PublicHoliday[];
   countryCode: string;
   year: number;
+  workDays?: number[];
 }
 
 export const StretchShare = ({
@@ -16,6 +17,7 @@ export const StretchShare = ({
   holidays,
   countryCode,
   year,
+  workDays,
 }: StretchShareProps) => {
   const [copied, setCopied] = useState(false);
 
@@ -23,21 +25,17 @@ export const StretchShare = ({
     return null;
   }
 
-  const stats = calculateEfficiency(vacationDays, holidays);
+  const stats = calculateEfficiency(vacationDays, holidays, workDays);
   const efficiency =
     stats.vacationDaysUsed > 0
       ? stats.totalDaysOff / stats.vacationDaysUsed
       : 0;
 
-  const sorted = [...vacationDays].sort();
-  const range =
-    sorted.length > 0
-      ? `${formatDateDisplay(sorted[0])} – ${formatDateDisplay(sorted[sorted.length - 1])}`
-      : '';
+  const range = getVacationBreaks(vacationDays, holidays, workDays).map(period => `${formatDateDisplay(period.startDate)} – ${formatDateDisplay(period.endDate)}`).join('; ');
 
   const snippet = [
     `I stretched ${stats.vacationDaysUsed} PTO day${stats.vacationDaysUsed === 1 ? '' : 's'} into ${stats.totalDaysOff} days off (${efficiency.toFixed(1)}×) with StretchBreak.`,
-    range ? `Break: ${range}` : '',
+    range ? `Breaks: ${range}` : '',
     `Country: ${countryCode} · ${year}`,
     'Plan yours: https://github.com/adefemi171/StretchBreak',
   ]
@@ -58,7 +56,7 @@ export const StretchShare = ({
     <section className="stretch-share" aria-label="Share your stretch">
       <div className="stretch-share-copy">
         <h3>Share your stretch</h3>
-        <p>Copy a short brag for Slack, LinkedIn, or a friend who wastes PTO.</p>
+        <p>Preview and copy a summary to share.</p>
       </div>
       <pre className="stretch-share-preview">{snippet}</pre>
       <button type="button" className="stretch-share-button" onClick={handleCopy}>

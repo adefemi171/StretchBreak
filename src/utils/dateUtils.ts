@@ -1,4 +1,4 @@
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameDay, getDay, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay, parseISO } from 'date-fns';
 
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
@@ -10,9 +10,17 @@ export const formatDateDisplay = (date: Date | string): string => {
   return format(dateObj, 'MMM d, yyyy');
 };
 
-export const isWeekendDay = (date: Date | string): boolean => {
+export const DEFAULT_WORK_DAYS = [1, 2, 3, 4, 5];
+
+export const normalizeWorkDays = (workDays?: number[]): number[] => {
+  const days = [...new Set((workDays ?? DEFAULT_WORK_DAYS).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))];
+  // At least one workday prevents unbounded adjacent-break expansion.
+  return days.length > 0 ? days : DEFAULT_WORK_DAYS;
+};
+
+export const isWeekendDay = (date: Date | string, workDays?: number[]): boolean => {
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return isWeekend(dateObj);
+  return !normalizeWorkDays(workDays).includes(getDay(dateObj));
 };
 
 export const isSameDate = (date1: Date | string, date2: Date | string): boolean => {

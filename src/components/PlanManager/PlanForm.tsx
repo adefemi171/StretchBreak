@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react';
-import type { HolidayPlan } from '../../utils/types';
+import { useState } from 'react';
+import type { HolidayPlan, PublicHoliday } from '../../utils/types';
 import './PlanForm.css';
 
 interface PlanFormProps {
   plan?: HolidayPlan;
   vacationDays: string[];
-  holidays: any[];
+  holidays: PublicHoliday[];
   countryCode: string;
   year: number;
   onSave: (plan: HolidayPlan) => void;
   onCancel: () => void;
 }
 
-export const PlanForm = ({
+export const PlanForm = (props: PlanFormProps) => <PlanFormFields key={props.plan?.id ?? "new"} {...props} />;
+
+const PlanFormFields = ({
   plan,
   vacationDays,
   holidays,
@@ -24,13 +26,6 @@ export const PlanForm = ({
   const [name, setName] = useState(plan?.name || '');
   const [description, setDescription] = useState(plan?.description || '');
   
-  useEffect(() => {
-    if (plan) {
-      setName(plan.name);
-      setDescription(plan.description || '');
-    }
-  }, [plan]);
-  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -40,13 +35,14 @@ export const PlanForm = ({
     }
     
     const planToSave: HolidayPlan = {
+      ...plan,
       id: plan?.id || `plan-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: name.trim(),
       description: description.trim() || undefined,
-      countryCode,
-      year,
-      vacationDays,
-      publicHolidays: holidays,
+      countryCode: plan?.countryCode ?? countryCode,
+      year: plan?.year ?? year,
+      vacationDays: plan?.vacationDays ?? vacationDays,
+      publicHolidays: plan?.publicHolidays ?? holidays,
       createdAt: plan?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

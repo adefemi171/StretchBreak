@@ -377,3 +377,67 @@
     padding: 1.25rem 1rem 2.5rem;
   }
 }
+
+/* Keep the core task visible and controls within small viewports. */
+.app-header { padding: 1.25rem 1.5rem; }
+.app-header h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); }
+.brand-mark { margin-bottom: .4rem; }
+.subtitle { font-size: 1rem; max-width: 44rem; }
+.app-controls, .location-control, .year-region-controls, .country-selector { min-width: 0; max-width: 100%; }
+.info-message { color: var(--ink); }
+.workweek-options { display: flex; flex-wrap: wrap; gap: .65rem; }
+.workweek-options label { display: flex; gap: .3rem; align-items: center; min-height: 44px; }
+.workweek-settings { padding: .7rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.workweek-settings summary { cursor: pointer; font-weight: 600; }
+.ai-request { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; }
+.app::before { display: none; }
+.app-tabs { max-width: 620px; }
+.app-main { max-width: 1000px; }
+.app-header { padding: 1.5rem 1rem 1.25rem; }
+.planning-progress { display: flex; justify-content: center; gap: 1.8rem; list-style: none; padding: 0; margin: 0 0 .5rem; }
+.planning-progress li { display: flex; align-items: center; gap: .5rem; color: var(--muted); font-size: .9rem; }
+.planning-progress li > span { display: grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); }
+.planning-progress .current { color: var(--accent); font-weight: 700; }
+.planning-progress .current > span { background: var(--accent); color: #fff; border-color: var(--accent); }
+.planning-progress .complete > span { background: var(--accent-soft); color: var(--accent); }
+.planning-context, .breaks-page-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.planning-context p { color: var(--muted); margin: 0; }
+.simple-disclosure { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .25rem 1rem; background: var(--surface); }
+.simple-disclosure > summary, .export-extra > summary { cursor: pointer; padding: .75rem 0; min-height: 44px; font-weight: 600; color: var(--ink-soft); }
+.simple-disclosure[open] { padding-bottom: 1rem; }
+.simple-disclosure > :not(summary) { margin-top: 1rem; }
+.save-plan-section { border-color: var(--accent); box-shadow: none; }
+.save-plan-section h2, .saved-break-summary h2 { margin: 0 0 .75rem; font-size: 1.65rem; overflow-wrap: anywhere; }
+.section-eyebrow { margin: 0 0 .4rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-size: .75rem; font-weight: 700; }
+.break-review-dates { font-size: 1.15rem; font-weight: 600; }
+.break-review-total { font-size: 1.1rem; line-height: 1.7; }
+.save-local-note { margin: 0; color: var(--muted); font-size: .8rem; }
+.save-plan-form .save-button { min-height: 48px; }
+.saved-break-view, .settings-and-tools { display: grid; gap: 1.25rem; }
+.saved-break-view > .back-button { justify-self: start; }
+.saved-break-summary { padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); }
+.holiday-data-notice { max-width: 760px; }
+@media (max-width: 600px) {
+  .planning-progress { gap: .7rem; }
+  .planning-progress li { gap: .3rem; font-size: .8rem; }
+  .planning-progress li > span { width: 1.4rem; height: 1.4rem; flex-shrink: 0; }
+  .app-tabs .tab { padding: .65rem .55rem; }
+  .save-plan-section, .saved-break-summary { padding: 1rem; }
+  .planning-context { gap: .65rem; }
+  .save-plan-form { max-width: 100%; }
+}
+@media (max-width: 600px) {
+  .app-header { padding: 1rem; }
+  .location-control, .year-region-controls { width: 100%; }
+  .country-selector { flex: 1; width: calc(100% - 50px); }
+  .country-select { min-width: 0; width: 100%; max-width: 100%; }
+  .app-tabs { flex-wrap: wrap; }
+  .tab { flex: 1 1 auto; min-height: 44px; }
+  .app-main { padding: 1rem .75rem 2rem; }
+  .calendar-nav-group { flex-wrap: wrap; }
+  .calendar-month { padding: .7rem; }
+  .calendar-day { min-height: 52px; padding: 4px 2px; }
+  .holiday-name, .company-holiday-name { font-size: .7rem; }
+  .calendar-container { padding: .7rem; }
+  .calendar-agenda p { padding: .75rem 0; border-bottom: 1px solid var(--border); }
+}

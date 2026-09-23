@@ -1,4 +1,4 @@
-import type { ReminderSettings, HolidayPlan } from '../utils/types';
+import type { ReminderSettings } from '../utils/types';
 import { getAllPlans } from './planStorage';
 
 const SETTINGS_KEY = 'reminder-settings';
@@ -16,7 +16,7 @@ export const getReminderSettings = (): ReminderSettings => {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (!stored) return getDefaultSettings();
     return { ...getDefaultSettings(), ...JSON.parse(stored) };
-  } catch (error) {
+  } catch {
     return getDefaultSettings();
   }
 };

@@ -1,6 +1,6 @@
 import type { ThemeMode } from '../../hooks/useTheme';
 import type { ContrastMode, FontScale } from '../../hooks/useAccessibility';
-import { downloadBackup, readBackupFile, importBackup, generateSyncCode, importFromSyncCode, listAllowedKeysInBackup } from '../../services/backupService';
+import { downloadBackup, readBackupFile, importBackup, generateSyncCode, importFromSyncCode, parseSyncCode, listAllowedKeysInBackup } from '../../services/backupService';
 import {
   getPreferredWeatherCity,
   searchCities,
@@ -46,25 +46,19 @@ export const SettingsTab = ({
   const citySearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setWeatherCity(getPreferredWeatherCity());
-  }, [countryCode]);
-
-  useEffect(() => {
-    if (citySearchTimer.current) clearTimeout(citySearchTimer.current);
-    const q = cityQuery.trim();
-    if (q.length < 2) {
-      setCityResults([]);
-      setCitySearching(false);
-      return;
-    }
-    setCitySearching(true);
+    let cancelled = false;
+    const query = cityQuery.trim();
+    if (query.length < 2) return;
     citySearchTimer.current = setTimeout(async () => {
-      const results = await searchCities(q, { countryCode, count: 6 });
+      setCitySearching(true);
+      const results = await searchCities(query, { countryCode, count: 6 });
+      if (cancelled) return;
       setCityResults(results);
       setCitySearching(false);
       setCityError(results.length === 0 ? 'No cities found. Try another spelling.' : '');
     }, 350);
     return () => {
+      cancelled = true;
       if (citySearchTimer.current) clearTimeout(citySearchTimer.current);
     };
   }, [cityQuery, countryCode]);
@@ -124,7 +118,7 @@ export const SettingsTab = ({
         alert('Backup restored! Please refresh the page to see changes.');
       } else {
         // Second confirm: Cancel on first dialog means merge, but also allow abort
-        const merge = confirm('Merge backup into current data? (Cancel aborts)');
+        const merge = confirm('Merge backup into current data? Existing items with matching IDs will be replaced; other items stay. (Cancel aborts)');
         if (!merge) return;
         importBackup(backup, 'merge');
         alert('Backup merged! Please refresh the page to see changes.');
@@ -160,6 +154,7 @@ export const SettingsTab = ({
     }
     
     try {
+      parseSyncCode(importCode); // Validate before offering a destructive replacement.
       const replace = confirm(
         'Import this sync code?\n\nOK = Replace current StretchBreak data\nCancel = choose merge/abort\n\nSync codes are base64 only — not encrypted.'
       );
@@ -167,15 +162,15 @@ export const SettingsTab = ({
         importFromSyncCode(importCode, 'replace');
         alert('Sync code imported! Please refresh the page to see changes.');
       } else {
-        const merge = confirm('Merge sync code into current data? (Cancel aborts)');
+        const merge = confirm('Merge sync code into current data? Existing items with matching IDs will be replaced; other items stay. (Cancel aborts)');
         if (!merge) return;
         importFromSyncCode(importCode, 'merge');
         alert('Sync code merged! Please refresh the page to see changes.');
       }
       setImportCode('');
       setShowImportCode(false);
-    } catch {
-      alert('Failed to import sync code: Invalid format');
+    } catch (error) {
+      alert('Failed to import sync code: ' + (error instanceof Error ? error.message : 'Invalid format'));
     }
   };
 
@@ -328,7 +323,7 @@ export const SettingsTab = ({
                   id="weather-city-input"
                   type="search"
                   value={cityQuery}
-                  onChange={(e) => setCityQuery(e.target.value)}
+                  onChange={(e) => { setCityQuery(e.target.value); setCityResults([]); setCitySearching(false); setCityError(''); }}
                   placeholder={`Search city in ${countryCode}…`}
                   autoComplete="off"
                 />
@@ -475,7 +470,7 @@ export const SettingsTab = ({
                 <div>
                   <div className="settings-option-title">Reset all data</div>
                   <div className="settings-option-description">
-                    Clear saved plans and PTO tracking. This cannot be undone.
+                    Clear all saved StretchBreak plans, preferences, PTO, team entries and other local app data. This cannot be undone.
                   </div>
                 </div>
               </div>

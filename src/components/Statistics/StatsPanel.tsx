@@ -5,24 +5,28 @@ import './StatsPanel.css';
 interface StatsPanelProps {
   vacationDays: string[];
   holidays: PublicHoliday[];
+  workDays?: number[];
   availablePTODays?: number;
+  projectedRemainingPTODays?: number;
   onViewInsights?: () => void;
 }
 
 export const StatsPanel = ({
   vacationDays,
   holidays,
+  workDays,
   availablePTODays,
+  projectedRemainingPTODays,
   onViewInsights,
 }: StatsPanelProps) => {
-  const stats = calculateEfficiency(vacationDays, holidays);
+  const stats = calculateEfficiency(vacationDays, holidays, workDays);
   const efficiency =
     stats.vacationDaysUsed > 0
       ? stats.totalDaysOff / stats.vacationDaysUsed
       : 0;
-  const remainingPTODays = availablePTODays !== undefined
+  const remainingPTODays = projectedRemainingPTODays ?? (availablePTODays !== undefined
     ? Math.max(0, availablePTODays - stats.vacationDaysUsed)
-    : undefined;
+    : undefined);
 
   return (
     <section className="stats-panel" aria-label="Plan statistics">

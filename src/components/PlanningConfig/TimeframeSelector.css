@@ -1,108 +1,31 @@
-.timeframe-selector {
-  margin-bottom: 1.5rem;
-}
-
 .timeframe-label {
   display: block;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--ink);
-  margin-bottom: 0.35rem;
-}
-
-.timeframe-subtitle {
-  font-size: 0.9rem;
-  color: var(--muted);
-  margin: 0 0 1rem;
-}
-
-.timeframe-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.timeframe-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.9rem;
-  padding: 1rem 1.1rem;
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
-  background-color: var(--surface-raised);
-}
-
-.timeframe-option:hover {
-  border-color: var(--accent);
-  background-color: var(--accent-soft);
-  transform: translateY(-1px);
-}
-
-.timeframe-option.selected {
-  border-color: var(--accent);
-  background-color: var(--accent-soft);
-}
-
-.timeframe-option input[type="radio"] {
-  width: 17px;
-  height: 17px;
-  margin-top: 2px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.timeframe-content {
-  flex: 1;
-}
-
-.timeframe-name {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 0.2rem;
-}
-
-.timeframe-description {
-  font-size: 0.85rem;
-  color: var(--muted);
   margin-bottom: 0.75rem;
 }
-
-.year-select,
-.date-input {
-  padding: 0.55rem 0.8rem;
+.year-select, .date-input {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.8rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-family: inherit;
+  font-size: 0.95rem;
   background-color: var(--surface-raised);
   color: var(--ink);
-  cursor: pointer;
 }
-
-.year-select:focus,
-.date-input:focus {
+.year-select:focus, .date-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
-
-.custom-dates {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.date-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.date-input-group label {
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-weight: 600;
+.custom-dates { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.date-input-group { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.date-input-group label { font-size: 0.85rem; color: var(--ink); font-weight: 600; }
+@media (max-width: 540px) {
+  .custom-dates { flex-direction: column; }
+  .year-select { width: 100%; }
 }

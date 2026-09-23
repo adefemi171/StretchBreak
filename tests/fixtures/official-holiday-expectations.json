@@ -1,0 +1,16 @@
+{
+  "checkedOn": "2026-09-22",
+  "NL": {
+    "source": "https://www.government.nl/faq/work/public-holidays-in-the-netherlands",
+    "scope": "Official public holiday dates, not entitlement to days off. Compare all raw provider categories.",
+    "2026": ["2026-01-01", "2026-04-03", "2026-04-05", "2026-04-06", "2026-04-27", "2026-05-05", "2026-05-14", "2026-05-24", "2026-05-25", "2026-12-25", "2026-12-26"],
+    "2027": ["2027-01-01", "2027-03-26", "2027-03-28", "2027-03-29", "2027-04-27", "2027-05-05", "2027-05-06", "2027-05-16", "2027-05-17", "2027-12-25", "2027-12-26"]
+  },
+  "US": {
+    "source": "https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/",
+    "scope": "OPM published observed federal holiday schedule for most Monday-Friday federal employees; not all states or private employers. Compare national Public OR Bank records.",
+    "2026": ["2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-06-19", "2026-07-03", "2026-09-07", "2026-10-12", "2026-11-11", "2026-11-26", "2026-12-25"],
+    "2027": ["2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18", "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", "2027-12-24"],
+    "boundaryNote": "OPM's 2028 New Year holiday is observed December 31, 2027. The 2027 provider endpoint omits this cross-year observed day. Employer calendar must include it where applicable."
+  }
+}

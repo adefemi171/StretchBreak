@@ -1,113 +1,70 @@
 .plan-suggestions {
-  margin-bottom: 0.5rem;
-  padding: 1.35rem 1.5rem;
+  padding: 1.5rem;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
-.plan-suggestions.empty {
-  padding: 2rem;
-  text-align: center;
+.plan-suggestions.empty,
+.no-results {
+  padding: 1.5rem;
   color: var(--muted);
-  background: rgba(20, 36, 40, 0.03);
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
 }
 
 .plan-suggestions h3 {
-  margin: 0 0 1rem;
+  margin: 0;
   font-size: 1.35rem;
 }
 
-.no-results {
-  padding: 1.5rem;
-  text-align: center;
+.suggestions-intro {
   color: var(--muted);
-  background: rgba(20, 36, 40, 0.03);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  margin-top: 1rem;
+  margin: 0.5rem 0 1.5rem;
 }
 
 .suggestions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .suggestion-card {
-  padding: 1.1rem 1.15rem;
+  padding: 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: rgba(20, 36, 40, 0.02);
-  transition: border-color 0.2s var(--ease-out), transform 0.2s var(--ease-out), background 0.2s var(--ease-out);
-}
-
-.suggestion-card:hover {
-  border-color: rgba(12, 124, 116, 0.35);
   background: var(--surface-solid);
-  transform: translateY(-1px);
-}
-
-.suggestion-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.7rem;
-  gap: 0.75rem;
-}
-
-.suggestion-rank {
-  font-family: var(--font-display);
-  font-weight: 700;
-  color: var(--accent);
-  font-size: 1.1rem;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .suggestion-dates {
+  margin: 0;
   font-weight: 600;
   color: var(--ink);
-  font-size: 0.95rem;
-}
-
-.suggestion-details {
-  display: flex;
-  gap: 1.25rem;
-  margin-bottom: 0.65rem;
-  flex-wrap: wrap;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.detail-item .label {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.detail-item .value {
   font-size: 1rem;
-  font-weight: 700;
+  line-height: 1.5;
+}
+
+.suggestion-benefit {
+  color: var(--muted);
+  line-height: 1.75;
+  margin: 1rem 0 1.5rem;
+}
+
+.suggestion-benefit strong {
   color: var(--ink);
 }
 
-.suggestion-reason {
-  margin: 0.5rem 0 0.85rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.45;
+.suggestion-filter-options {
+  margin-top: 1.25rem;
 }
 
 .apply-button {
-  padding: 0.55rem 1rem;
+  margin-top: auto;
+  padding: 0.7rem 1rem;
+  min-height: 44px;
   background: var(--accent);
   color: white;
   border: none;
@@ -115,10 +72,24 @@
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
-  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
 
 .apply-button:hover {
   background: var(--accent-hover);
-  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .suggestions-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-suggestions {
+    padding: 1rem;
+  }
+
+  .suggestion-card {
+    padding: 1rem;
+  }
 }

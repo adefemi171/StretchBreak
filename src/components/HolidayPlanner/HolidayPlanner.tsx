@@ -1,19 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
-import { eachDayOfInterval, isSameDay, isPast, parseISO, startOfDay } from 'date-fns';
+import { useState, type ReactNode } from 'react';
+import { format, startOfDay } from 'date-fns';
 import { Calendar } from '../Calendar/Calendar';
 import { PlanSuggestions } from './PlanSuggestions';
 import { StrategySelector } from '../PlanningConfig/StrategySelector';
-import { findOptimalVacationPeriods } from '../../utils/planningAlgorithm';
-import { formatDate, parseDateString } from '../../utils/dateUtils';
-import { getTotalPTODays, getRemainingPTODays } from '../../services/ptoTracking';
+import { getLeaveDates, normalizeSuggestion } from '../../utils/planningAlgorithm';
+import { formatDate } from '../../utils/dateUtils';
 import type { PublicHoliday, PlanSuggestion, CompanyHoliday, VacationStrategy } from '../../utils/types';
 import './HolidayPlanner.css';
 
 interface HolidayPlannerProps {
   holidays: PublicHoliday[];
+  workDays?: number[];
   companyHolidays?: CompanyHoliday[];
   year: number;
   holidaysLoading?: boolean;
+  extraOptions?: ReactNode;
   suggestions?: PlanSuggestion[];
   selectedDates?: string[];
   onDateChange?: (dates: string[]) => void;
@@ -28,9 +29,11 @@ interface HolidayPlannerProps {
 
 export const HolidayPlanner = ({
   holidays,
+  workDays,
   companyHolidays = [],
   year,
   holidaysLoading = false,
+  extraOptions,
   suggestions: externalSuggestions = [],
   selectedDates: externalSelectedDates = [],
   onDateChange,
@@ -40,58 +43,25 @@ export const HolidayPlanner = ({
   usedStrategies = [],
   onStrategyChange,
   onApplyStrategy,
-  onAutoSave,
 }: HolidayPlannerProps) => {
   const [internalSelectedDates, setInternalSelectedDates] = useState<string[]>([]);
-  const selectedDates = externalSelectedDates.length > 0 ? externalSelectedDates : internalSelectedDates;
-  const [suggestedDates, setSuggestedDates] = useState<string[]>([]);
-  const [algorithmSuggestions, setAlgorithmSuggestions] = useState<PlanSuggestion[]>([]);
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
-  
-  useEffect(() => {
-    if (holidaysLoading || holidays.length === 0) {
-      setAlgorithmSuggestions([]);
-      setSuggestedDates([]);
-      return;
-    }
-    
-    const today = startOfDay(new Date());
-    
-    const filteredHolidays = holidays.filter(holiday => {
-      const holidayDate = startOfDay(parseISO(holiday.date));
-      const holidayYear = holidayDate.getFullYear();
-      const isInYear = holidayYear === year;
-      const isFutureOrToday = !isPast(holidayDate) || isSameDay(holidayDate, today);
-      return isInYear && isFutureOrToday;
-    });
-    
-    const hasHolidaysForYear = filteredHolidays.length > 0;
-    const allHolidaysMatchYear = holidays.length === 0 || filteredHolidays.length === holidays.filter(h => {
-      const holidayDate = startOfDay(parseISO(h.date));
-      return holidayDate.getFullYear() === year;
-    }).length;
-    
-    if (!hasHolidaysForYear || !allHolidaysMatchYear) {
-      setAlgorithmSuggestions([]);
-      setSuggestedDates([]);
-      return;
-    }
-    
-    const suggestions = findOptimalVacationPeriods(filteredHolidays, year);
-    setAlgorithmSuggestions(suggestions);
-    
-    const allSuggestions = externalSuggestions.length > 0 
-      ? [...externalSuggestions, ...suggestions]
-      : suggestions;
-    
-    const suggested: string[] = [];
-    allSuggestions.slice(0, 3).forEach(suggestion => {
-      suggested.push(suggestion.startDate, suggestion.endDate);
-    });
-    setSuggestedDates(suggested);
-  }, [holidays, year, externalSuggestions, holidaysLoading]);
-  
+  const selectedDates = onDateChange ? externalSelectedDates : internalSelectedDates;
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [appliedFocus, setAppliedFocus] = useState<{ dates: string[]; external?: string[] } | null>(null);
+
+  const allHolidays: PublicHoliday[] = [...holidays, ...companyHolidays.map(holiday => ({
+    date: holiday.date, name: holiday.name, localName: holiday.name, countryCode: holiday.countryCode ?? '',
+    fixed: false, global: true, counties: null, launchYear: null, types: ['Company'],
+  }))];
+  const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
+  // The parent owns budget, timeframe and strategy. Never replace an empty constrained result with a fallback.
+  const allSuggestions = holidaysLoading ? [] : externalSuggestions
+    .map(suggestion => normalizeSuggestion(suggestion, allHolidays, workDays))
+    .filter((suggestion): suggestion is PlanSuggestion => suggestion !== null)
+    .filter(suggestion => suggestion.startDate >= today &&
+      (availablePTODays === undefined || suggestion.vacationDaysUsed <= availablePTODays));
+  const suggestedDates = allSuggestions.slice(0, 3).flatMap(suggestion => suggestion.leaveDates ?? []);
+
   const handleDateClick = (date: Date) => {
     const dateStr = formatDate(date);
     const newDates = selectedDates.includes(dateStr)
@@ -106,141 +76,77 @@ export const HolidayPlanner = ({
   };
   
   const handleApplySuggestion = (suggestion: PlanSuggestion) => {
-    try {
-      const start = parseDateString(suggestion.startDate);
-      const end = parseDateString(suggestion.endDate);
-      const dates: string[] = [];
-      
-      const allDays = eachDayOfInterval({ start, end });
-      
-      for (const day of allDays) {
-        const dateStr = formatDate(day);
-        const isPublicHoliday = holidays.some(h => h.date === dateStr);
-        const isCompanyHoliday = companyHolidays.some(h => h.date === dateStr);
-        const dayOfWeek = day.getDay();
-        
-        if (!isPublicHoliday && !isCompanyHoliday && dayOfWeek !== 0 && dayOfWeek !== 6) {
-          dates.push(dateStr);
-        }
-      }
-      
-      const sortedDates = [...new Set(dates)].sort();
-      
-      if (sortedDates.length === 0) {
-        alert('No weekdays available to apply in this plan after filtering holidays and weekends.');
-        return;
-      }
-
-      // Auto-save plan if strategy is selected and onAutoSave callback is provided
-      if (strategy && onAutoSave) {
-        const strategyLabels: Record<string, string> = {
-          'balanced': 'Flexible Approach',
-          'long-weekends': 'Weekend Focus',
-          'mini-breaks': 'Short Getaways',
-          'week-long': 'Full Week Vacations',
-          'extended': 'Deep Breaks',
-        };
-        const planName = strategyLabels[strategy] || strategy;
-        
-        onAutoSave({
-          name: planName,
-          vacationDays: sortedDates,
-          strategy,
-          availablePTODays: availablePTODays || 0,
-        });
-        
-        // Show feedback that plan was auto-saved
-        setAppliedFeedback('Applied & Saved!');
-      } else {
-        setAppliedFeedback('Applied!');
-      }
-
-      if (onDateChange) {
-        onDateChange(sortedDates);
-        setTimeout(() => setAppliedFeedback(null), 2000);
-        setTimeout(() => {
-          calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      } else {
-        setInternalSelectedDates(sortedDates);
-        setTimeout(() => setAppliedFeedback(null), 2000);
-        setTimeout(() => {
-          calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      }
-    } catch (error) {
-      alert('Error applying suggestion: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+    const sortedDates = getLeaveDates(suggestion.startDate, suggestion.endDate, allHolidays, workDays);
+    if (!sortedDates.length) return;
+    setAppliedFocus({ dates: sortedDates, external: focusOnDates });
+    setCalendarOpen(false);
+    if (onDateChange) onDateChange(sortedDates);
+    else setInternalSelectedDates(sortedDates);
+    requestAnimationFrame(() => document.getElementById('review-heading')?.focus({ preventScroll: true }));
   };
-  
-  const filteredExternalSuggestions = externalSuggestions.filter(suggestion => {
-    const suggestionYear = parseISO(suggestion.startDate).getFullYear();
-    return suggestionYear === year;
-  });
-  
-  const allSuggestions = filteredExternalSuggestions.length > 0 && algorithmSuggestions.length === 0
-    ? filteredExternalSuggestions
-    : algorithmSuggestions;
-  
-  const today = startOfDay(new Date());
-  const futureHolidays = holidays.filter(holiday => {
-    const holidayDate = startOfDay(parseISO(holiday.date));
-    return !isPast(holidayDate) || isSameDay(holidayDate, today);
-  });
-  
-  // PTO Display
-  const totalPTO = getTotalPTODays();
-  const remainingPTO = getRemainingPTODays();
-  const showPTODisplay = totalPTO > 0;
-  
+
+  const handleChooseAnother = () => {
+    setCalendarOpen(false);
+    setAppliedFocus(null);
+    if (onDateChange) onDateChange([]);
+    else setInternalSelectedDates([]);
+    requestAnimationFrame(() => document.getElementById('break-choices-heading')?.focus({ preventScroll: true }));
+  };
+
   return (
     <div className="holiday-planner">
-      {showPTODisplay && (
-        <div className="pto-display-section">
-          <p className="pto-display-description">
-            You have {remainingPTO} remaining PTO days out of {totalPTO} total. The app will optimize using your remaining days.
-          </p>
-          <div className="pto-display-stats">
-            <div className="pto-stat">
-              <span className="pto-stat-label">Total PTO:</span>
-              <span className="pto-stat-value">{totalPTO}</span>
-            </div>
-            <div className="pto-stat">
-              <span className="pto-stat-label">Remaining:</span>
-              <span className={`pto-stat-value ${remainingPTO === 0 ? 'pto-zero' : remainingPTO < 5 ? 'pto-low' : ''}`}>
-                {remainingPTO}
-              </span>
-            </div>
-          </div>
-        </div>
+      {selectedDates.length === 0 ? (
+        <>
+          {holidaysLoading ? <p role="status">Finding breaks around your holidays…</p> : (
+            <PlanSuggestions
+              suggestions={allSuggestions}
+              onApplySuggestion={handleApplySuggestion}
+              extraOptions={onStrategyChange || extraOptions ? (
+                <>
+                  {onStrategyChange && (
+                    <div className="strategy-selector-section">
+                      <StrategySelector
+                        value={strategy as VacationStrategy | undefined}
+                        onChange={onStrategyChange}
+                        disabledStrategies={usedStrategies}
+                        onApplyStrategy={onApplyStrategy}
+                      />
+                    </div>
+                  )}
+                  {extraOptions}
+                </>
+              ) : undefined}
+            />
+          )}
+        </>
+      ) : (
+        <button type="button" className="ghost-button choose-another-break" onClick={handleChooseAnother}>
+          Choose another break
+        </button>
       )}
-      
-      {onStrategyChange && (
-        <div className="strategy-selector-section">
-          <StrategySelector
-            value={strategy as VacationStrategy | undefined}
-            onChange={onStrategyChange}
-            disabledStrategies={usedStrategies}
-            onApplyStrategy={onApplyStrategy}
+      <div className="manual-date-options">
+        <button
+          type="button"
+          className="calendar-disclosure-button"
+          aria-expanded={calendarOpen}
+          aria-controls="break-date-calendar"
+          onClick={() => setCalendarOpen(open => !open)}
+        >
+          {calendarOpen ? 'Close calendar' : selectedDates.length > 0 ? 'Adjust dates' : 'Choose my own dates'}
+        </button>
+        <div id="break-date-calendar" hidden={!calendarOpen}>
+          <p className="calendar-help">Select the workdays you want to take off. Select a date again to remove it.</p>
+          <Calendar
+            selectedDates={selectedDates}
+            suggestedDates={suggestedDates}
+            holidays={holidays}
+            companyHolidays={companyHolidays}
+            onDateClick={handleDateClick}
+            year={year}
+            focusOnDates={appliedFocus?.external === focusOnDates ? appliedFocus?.dates : focusOnDates}
+            workDays={workDays}
           />
         </div>
-      )}
-      
-      <PlanSuggestions
-        suggestions={allSuggestions}
-        onApplySuggestion={handleApplySuggestion}
-        appliedFeedback={appliedFeedback}
-      />
-      <div ref={calendarRef}>
-        <Calendar
-          selectedDates={selectedDates}
-          suggestedDates={suggestedDates}
-          holidays={futureHolidays}
-          companyHolidays={companyHolidays}
-          onDateClick={handleDateClick}
-          year={year}
-          focusOnDates={focusOnDates}
-        />
       </div>
     </div>
   );

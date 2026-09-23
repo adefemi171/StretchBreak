@@ -12,6 +12,7 @@ import './NaturalLanguageInput.css';
 interface NaturalLanguageInputProps {
   holidays: PublicHoliday[];
   year: number;
+  suggestions?: PlanSuggestion[];
   onApplySuggestion: (suggestion: PlanSuggestion) => void;
 }
 
@@ -25,6 +26,7 @@ const EXAMPLES = [
 export const NaturalLanguageInput = ({
   holidays,
   year,
+  suggestions,
   onApplySuggestion,
 }: NaturalLanguageInputProps) => {
   const [query, setQuery] = useState('');
@@ -34,7 +36,7 @@ export const NaturalLanguageInput = ({
 
   const runSearch = (text: string) => {
     const request = parseNaturalLanguageRequest(text);
-    const all = findOptimalVacationPeriods(holidays, year);
+    const all = suggestions ?? findOptimalVacationPeriods(holidays, year);
     const filtered = filterSuggestionsByRequest(all, request).slice(0, 5);
     setMatches(filtered);
     setFilterLabel(describeRequest(request));
@@ -46,7 +48,7 @@ export const NaturalLanguageInput = ({
       <div className="nl-header">
         <h3>Describe your break</h3>
         <p className="nl-subtitle">
-          Plain English works here — runs locally on public holidays, no AI key needed.
+          Search your suggested breaks in plain English. This search stays on your device.
         </p>
       </div>
 

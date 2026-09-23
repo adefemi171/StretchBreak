@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getAllWishlistItems, saveWishlistItem, deleteWishlistItem, reorderWishlist, createWishlistItemId } from '../../services/wishlistStorage';
-import type { WishlistItem, PlanSuggestion, PublicHoliday } from '../../utils/types';
+import type { WishlistItem, PlanSuggestion } from '../../utils/types';
 import './WishlistPanel.css';
 
 interface WishlistPanelProps {
@@ -9,7 +9,7 @@ interface WishlistPanelProps {
 }
 
 export const WishlistPanel = ({ suggestions = [], onApplySuggestion }: WishlistPanelProps) => {
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [items, setItems] = useState<WishlistItem[]>(() => getAllWishlistItems().sort((a, b) => a.priority - b.priority));
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -20,10 +20,6 @@ export const WishlistPanel = ({ suggestions = [], onApplySuggestion }: WishlistP
     preferredMonths: [] as number[],
     notes: '',
   });
-
-  useEffect(() => {
-    loadItems();
-  }, []);
 
   const loadItems = () => {
     const loaded = getAllWishlistItems();
