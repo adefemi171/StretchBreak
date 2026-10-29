@@ -33,4 +33,4 @@
     Content-Security-Policy = "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://challenges.cloudflare.com; media-src 'none'; object-src 'none'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com https://date.nager.at https://api.open-meteo.com https://archive-api.open-meteo.com https://geocoding-api.open-meteo.com https://ipapi.co https://ip-api.com https://api.ipgeolocation.io https://ipwho.is https://api.bigdatacloud.net https://geocode.xyz https://hooks.slack.com https://hooks.slack-gov.com https://outlook.office.com https://outlook.office365.com https://webhook.office.com; worker-src 'self'; manifest-src 'self'; upgrade-insecure-requests"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "22.23.4"
