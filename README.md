@@ -4,7 +4,7 @@ Plan time off around public holidays, your workweek and employer closures. The c
 
 ## Local development
 
-Use Node 22 or newer (`.nvmrc` selects 22).
+Use patched Node.js 22.23.4 or a newer patched 22.x release (`.nvmrc` selects 22.23.4).
 
 ```sh
 npm ci --ignore-scripts
@@ -39,7 +39,7 @@ npm run check:deployment -- https://your-production-origin --expect-ai=disabled
 
 The holiday audit checks provider coverage and schema separately from pinned official-date comparisons. It does not certify all worldwide employee entitlements. Deployment smoke checks never make paid AI calls. Use `--expect-ai=ready` only after real production access and storage controls are configured.
 
-The scoped `ipx → sharp@0.35.4` override fixes upstream image-library advisories while retaining the current Netlify CLI. A regression test covers its PNG/WebP/AVIF pipeline. Reassess the override when IPX adopts a patched version directly. [Sharp advisory](https://github.com/lovell/sharp/security/advisories/GHSA-rgj7-g3m4-5g8c).
+The scoped `ipx → sharp@0.35.5` override fixes upstream image-library advisories while retaining the current Netlify CLI. A regression test covers its PNG/WebP/AVIF pipeline. Reassess the override when IPX adopts a patched version directly. [Sharp advisory](https://github.com/lovell/sharp/security/advisories/GHSA-rgj7-g3m4-5g8c).
 
 See [implementation status](IMPLEMENTATION-STATUS.md) for completed work and external prerequisites.
 
